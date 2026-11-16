@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fusion:presentation:request:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "analysis": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 24000
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048,
+                "pattern": "^https?://[^\\s]+$",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 30
+    },
+    "target_format": {
+      "enum": [
+        "html",
+        "pptx"
+      ]
+    },
+    "locale": {
+      "const": "zh-CN",
+      "default": "zh-CN"
+    },
+    "max_slides": {
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 12,
+      "default": 8
+    },
+    "requested_slides": {
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 12
+    }
+  },
+  "required": [
+    "schema_version",
+    "analysis",
+    "sources",
+    "target_format"
+  ]
+}

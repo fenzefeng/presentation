@@ -1,0 +1,18 @@
+{
+  "default": "knowledge-arch-blueprint",
+  "templates": {
+    "knowledge-arch-blueprint": {
+      "body_class": "tpl-knowledge-arch-blueprint",
+      "styles": ["visuals/commodity.css", "visuals/templates/knowledge-arch-blueprint/style.css", "visuals/templates/knowledge-arch-blueprint/adapter.css"],
+      "prompt": "prompts/html-blueprint.md",
+      "version": "knowledge-arch-blueprint-v1",
+      "upstream": "third_party/html-ppt-skill/templates/full-decks/knowledge-arch-blueprint/index.html"
+    },
+    "commodity-v2": {
+      "body_class": "",
+      "styles": ["visuals/commodity.css"],
+      "prompt": null,
+      "version": "commodity-v2"
+    }
+  }
+}

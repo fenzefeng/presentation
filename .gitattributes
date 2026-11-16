@@ -1,0 +1,2 @@
+third_party/html-ppt-skill/** -text -whitespace
+scripts/presentation_core/visuals/templates/** -text

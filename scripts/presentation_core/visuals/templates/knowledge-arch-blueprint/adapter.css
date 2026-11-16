@@ -1,0 +1,67 @@
+/* Adapt the upstream blueprint components to our offline 1280x720 research deck.
+   Upstream style.css and LICENSE are kept verbatim in this directory. */
+body[data-theme=commodity].tpl-knowledge-arch-blueprint{
+  --paper:var(--kb-bg);--ink:var(--kb-ink);--muted:#555;--teal:var(--kb-rust);
+  --copper:#1a1a1a;--line:var(--kb-line);--soft:#e7ded0;--radius:12px;
+  --series-1:#B5392A;--series-2:#1a1a1a;
+  background:#d6cfc3;color:var(--kb-ink);font-family:var(--font)
+}
+body[data-theme=commodity].tpl-knowledge-arch-blueprint .slide{padding:48px 64px 64px}
+.tpl-knowledge-arch-blueprint .slide>.kb-grid-bg{position:absolute;inset:0;z-index:0;background-size:32px 32px}
+.tpl-knowledge-arch-blueprint .slide>.slide-footer{position:absolute;z-index:3;left:64px;right:64px;bottom:23px;padding-top:12px;color:#686159;font-size:11px;letter-spacing:.08em}
+.tpl-knowledge-arch-blueprint .slide h1.kb-h1{font-size:58px;line-height:1.18;font-weight:900;margin:14px 0 22px}
+.tpl-knowledge-arch-blueprint .slide h2.kb-h1{font-size:34px;line-height:1.35;font-weight:900;margin:0}
+.tpl-knowledge-arch-blueprint .slide .kb-kicker{font-size:13px;letter-spacing:.13em;line-height:1.5;margin:0 0 12px}
+.tpl-knowledge-arch-blueprint .slide .kb-sub{font-size:22px;line-height:1.65;color:#555;margin:0}
+body[data-theme=commodity].tpl-knowledge-arch-blueprint .slide.cover{background:var(--kb-bg);color:var(--kb-ink);justify-content:center;padding-right:64px}
+.tpl-knowledge-arch-blueprint .cover::before,.tpl-knowledge-arch-blueprint .cover::after{display:none}
+.tpl-knowledge-arch-blueprint .cover .eyebrow{color:var(--kb-rust)}
+.tpl-knowledge-arch-blueprint .cover .lede{color:#555}
+.tpl-knowledge-arch-blueprint .cover .cover-meta{color:#686159;font-size:14px;margin-top:28px}
+.tpl-knowledge-arch-blueprint .cover .rule{background:var(--kb-rust);width:64px}
+.tpl-knowledge-arch-blueprint .kb-cover-top{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:36px;align-items:start}
+.tpl-knowledge-arch-blueprint .kb-cover-top .kb-h1{max-width:none}
+.tpl-knowledge-arch-blueprint .kb-insight{font-size:18px;line-height:1.65;padding:22px 24px;margin-top:44px;max-width:none}
+.tpl-knowledge-arch-blueprint .kb-insight .kk{font-size:12px;letter-spacing:.15em;margin-bottom:12px}
+.tpl-knowledge-arch-blueprint .kb-section-label{font-size:12px;letter-spacing:.12em;margin:24px 0 12px}
+.tpl-knowledge-arch-blueprint .kb-card{padding:25px 26px}
+.tpl-knowledge-arch-blueprint .kb-card p{font-size:20px;line-height:1.7;margin:0}
+.tpl-knowledge-arch-blueprint .kb-card h3{font-weight:900}
+.tpl-knowledge-arch-blueprint .card.accent{background:var(--kb-rust);border-color:var(--kb-rust);color:white}
+.tpl-knowledge-arch-blueprint .card.accent p{color:#fff}
+.tpl-knowledge-arch-blueprint .card.accent .card-number{color:#f5d4cb}
+.tpl-knowledge-arch-blueprint .takeaway{background:var(--kb-rust-soft);border-color:var(--kb-rust)}
+.tpl-knowledge-arch-blueprint .kpi{border:2px solid var(--kb-ink);border-top:4px solid var(--kb-rust);border-radius:12px}
+.tpl-knowledge-arch-blueprint .kpi .value{color:var(--kb-rust);font-weight:900}
+.tpl-knowledge-arch-blueprint .chart-panel{border:2px solid var(--kb-ink);border-radius:12px}
+.tpl-knowledge-arch-blueprint .chart-grid{stroke:#ded8cf}
+.tpl-knowledge-arch-blueprint .process.kb-pipeline{display:grid;grid-template-columns:repeat(var(--columns,4),minmax(0,1fr));gap:24px;margin-top:15px}
+.tpl-knowledge-arch-blueprint .process .kb-step{padding:28px 23px 24px;min-height:245px}
+.tpl-knowledge-arch-blueprint .step .kb-step-num{font-size:13px;letter-spacing:.08em;color:#777}
+.tpl-knowledge-arch-blueprint .step .kb-step-title{font-size:20px;line-height:1.5;font-weight:900;margin-bottom:12px}
+.tpl-knowledge-arch-blueprint .step .kb-step-body{font-size:18px;line-height:1.7}
+.tpl-knowledge-arch-blueprint .step.hero .kb-step-num{background:#ffffff20;color:white}
+.tpl-knowledge-arch-blueprint .step.hero .kb-step-title,.tpl-knowledge-arch-blueprint .step.hero .kb-step-body{color:white}
+.tpl-knowledge-arch-blueprint .scenario-grid .kb-card{padding:20px 24px}
+.tpl-knowledge-arch-blueprint .scenario-grid .kb-card p{font-size:18px}
+.tpl-knowledge-arch-blueprint .research-table{border:2px solid var(--kb-ink);border-radius:12px}
+.tpl-knowledge-arch-blueprint .research-table th{background:var(--kb-ink)}
+.tpl-knowledge-arch-blueprint .research-table tr:nth-child(even) td{background:#f5f0e8}
+.tpl-knowledge-arch-blueprint .bullet-list li,.tpl-knowledge-arch-blueprint .source-item{border-color:var(--kb-ink)}
+@media screen and (max-width:600px){
+ body[data-theme=commodity].tpl-knowledge-arch-blueprint .slide{padding:30px 22px 105px}
+ body[data-theme=commodity].tpl-knowledge-arch-blueprint .slide.cover{padding-right:22px}
+ .tpl-knowledge-arch-blueprint .kb-cover-top{grid-template-columns:1fr;gap:18px}
+ .tpl-knowledge-arch-blueprint .slide h1.kb-h1{font-size:38px;line-height:1.35}
+ .tpl-knowledge-arch-blueprint .slide h2.kb-h1{font-size:27px}
+ .tpl-knowledge-arch-blueprint .slide .kb-sub{font-size:18px}
+ .tpl-knowledge-arch-blueprint .kb-insight{margin-top:0;font-size:17px;padding:18px 20px}
+ .tpl-knowledge-arch-blueprint .kb-card p{font-size:18px}
+ .tpl-knowledge-arch-blueprint .process.kb-pipeline{grid-template-columns:1fr;gap:12px;margin-top:0}
+ .tpl-knowledge-arch-blueprint .process .kb-step{min-height:0;padding:22px}
+ .tpl-knowledge-arch-blueprint .kb-step.hero{transform:none}
+ .tpl-knowledge-arch-blueprint .slide>.slide-footer{left:22px;right:22px;bottom:70px;font-size:10px}
+}
+@media print{
+ .tpl-knowledge-arch-blueprint .slide>.slide-footer{left:64px;right:64px;bottom:23px}
+}

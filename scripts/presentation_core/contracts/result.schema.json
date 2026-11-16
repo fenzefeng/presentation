@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fusion:presentation:result:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "generation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "input_sha256": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "slide_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 12
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "format": {
+            "enum": [
+              "html",
+              "pptx"
+            ]
+          },
+          "filename": {
+            "enum": [
+              "presentation.html",
+              "presentation.pptx"
+            ]
+          },
+          "media_type": {
+            "enum": [
+              "text/html",
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            ]
+          },
+          "local_path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "format",
+          "filename",
+          "media_type",
+          "local_path",
+          "size_bytes",
+          "sha256"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 1
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "sources_missing",
+          "source_mapping_unverified",
+          "review_required",
+          "font_fallback"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 4,
+      "uniqueItems": true
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "model",
+            "offline"
+          ]
+        },
+        "model_arm": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "template_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "planner_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "model_arm",
+        "template_version",
+        "planner_version"
+      ]
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "enum": [
+                "invalid_request",
+                "model_auth_failed",
+                "model_timeout",
+                "model_unavailable",
+                "invalid_deck",
+                "layout_overflow",
+                "render_dependency_missing",
+                "render_failed",
+                "storage_failed",
+                "interrupted",
+                "deadline_exceeded",
+                "cancelled",
+                "invalid_html"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "generation_id",
+    "status",
+    "created_at",
+    "input_sha256",
+    "slide_count",
+    "artifacts",
+    "warnings",
+    "provenance",
+    "error"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "succeeded"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "artifacts": {
+            "minItems": 1
+          },
+          "slide_count": {
+            "minimum": 3
+          },
+          "error": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "artifacts": {
+            "maxItems": 0
+          },
+          "slide_count": {
+            "const": 0
+          },
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "enum": [
+                  "invalid_request",
+                  "model_auth_failed",
+                  "model_timeout",
+                  "model_unavailable",
+                  "invalid_deck",
+                  "layout_overflow",
+                  "render_dependency_missing",
+                  "render_failed",
+                  "storage_failed",
+                  "interrupted",
+                  "deadline_exceeded",
+                  "cancelled",
+                  "invalid_html"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "cancelled"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "const": "cancelled"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

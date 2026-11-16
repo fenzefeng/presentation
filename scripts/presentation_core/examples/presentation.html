@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>供需分析演示（合成示例）</title>
+<style>
+body{margin:0;background:#e6edf2;color:#183549;font-family:sans-serif}.slide{display:none;box-sizing:border-box;margin:4vh auto;padding:5%;width:92vw;min-height:75vh;background:white;border-left:8px solid #008577}.slide.active{display:block}h1{font-size:36px}p{font-size:22px;line-height:1.8}nav{text-align:center}button{padding:10px 24px;margin:0 8px}footer{color:#526575}@media print{.slide{display:block;break-after:page}nav{display:none}}
+</style>
+</head>
+<body>
+<section class="slide active"><h1>供需分析演示（合成示例）</h1><p>用于验证 HTML 文件保存与重放。</p><footer>内容需复核</footer></section>
+<section class="slide"><h1>观察与限制</h1><p>供应与需求应结合观察，单一指标不足以支持价格方向判断。</p><p>现有材料缺少可比较的数据序列，因此不提供量化预测。</p><footer>内容需复核</footer></section>
+<section class="slide"><h1>数据来源</h1><p>[s1] 合成分析材料</p><p>仅用于验证生成链路，无真实行情数据或外部来源。</p><footer>内容需复核</footer></section>
+<nav><button id="prev">上一页</button><span id="counter"></span><button id="next">下一页</button></nav>
+<script>
+(()=>{const slides=[...document.querySelectorAll('.slide')];let current=0;function show(n){current=Math.max(0,Math.min(slides.length-1,n));slides.forEach((s,i)=>s.classList.toggle('active',i===current));document.getElementById('counter').textContent=`${current+1} / ${slides.length}`;}document.getElementById('prev').onclick=()=>show(current-1);document.getElementById('next').onclick=()=>show(current+1);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')show(current+1);if(e.key==='ArrowLeft')show(current-1);});show(0);})();
+</script>
+</body>
+</html>

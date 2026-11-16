@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "title": "供需分析演示（合成示例）",
+  "analysis": "以下为合成演示材料，不代表真实市场判断。分析认为供应与需求应结合观察，单一指标不足以支持价格方向判断。现有材料缺少可比较的数据序列，因此不提供量化预测。",
+  "sources": [
+    {
+      "id": "s1",
+      "title": "合成分析材料",
+      "description": "仅用于验证生成链路，无真实行情数据或外部来源。",
+      "url": null,
+      "data_date": null
+    }
+  ],
+  "target_format": "html",
+  "locale": "zh-CN",
+  "max_slides": 8
+}
