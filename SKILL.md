@@ -1,6 +1,8 @@
 ---
 name: presentation
 description: 将当前问题的分析或当前会话中选定的查数、分析和总结制作成 HTML 或 PPTX 演示。用于生成演示文件，不用于普通查数或仅要求文字总结的问题。
+metadata:
+  version: "v0.1"
 ---
 
 # 中文大宗商品分析演示
@@ -33,3 +35,7 @@ HTML 按 skill 内的模板配置加载视觉样式和组件指引，PPTX 使用
 完整第三方模板参考库和来源记录位于 [third_party/](third_party/)，随本 skill 一起迁移；查阅模板时阅读 [模板切换说明](references/html-templates.md)。
 
 跨项目接入或适配执行工具时阅读 [工具契约与迁移说明](references/integration.md)；正常生成演示无需加载该文档。
+
+## 版本维护
+
+本 skill 的版本号以本文件 frontmatter 中的 `metadata.version` 为准。每次完成一轮迭代（指令、代码、模板或其他随包资源的修改），同步更新版本号；默认依次递增为 `v0.2`、`v0.3`，用户指定版本时以用户要求为准。同一轮迭代中的多次编辑共用一个版本号。

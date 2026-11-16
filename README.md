@@ -1,5 +1,7 @@
 # presentation
 
+版本号见 [SKILL.md](SKILL.md) 的 `metadata.version`；每轮迭代完成时同步递增。
+
 面向中文大宗商品研究的 HTML 与可编辑 PPTX 演示技能。输入已完成的分析正文及来源，输出演示文件；行业分析由宿主完成。本技能不重新查询行情，不负责垂直模型分析。
 
 HTML 默认使用 knowledge-arch-blueprint 视觉模板，内嵌样式、图表与交互；PPTX 采用独立原生版式，文本、形状、表格及图表可编辑。完整第三方参考库和许可证随 `third_party/` 打包，其他参考模板不会因安装而自动启用。
