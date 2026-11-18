@@ -35,6 +35,7 @@ class PortableSkillTests(unittest.TestCase):
     def test_copied_skill_renders_both_formats_and_has_no_fusion_imports(self):
         for fmt, flag, example, request in [
                 ('html', '--html', 'presentation.html', 'request.json'),
+                ('html', '--research', 'research.json', 'research-request.json'),
                 ('pptx', '--deck', 'deck.json', 'request.json'),
                 ('html', '--html', 'commodity.html', 'commodity-request.json'),
                 ('pptx', '--deck', 'commodity-deck.json', 'commodity-request.json')]:
@@ -44,6 +45,9 @@ class PortableSkillTests(unittest.TestCase):
             self.assertEqual(artifact.suffix, '.' + fmt)
             if example == 'commodity.html':
                 self.assertIn('<script id="commodity-runtime">', artifact.read_text())
+            if example == 'research.json':
+                self.assertEqual(result['slide_count'], 0)
+                self.assertIn('14,845', artifact.read_text())
             if fmt == 'pptx':
                 with ZipFile(artifact) as archive:
                     self.assertIsNone(archive.testzip())
@@ -55,12 +59,12 @@ class PortableSkillTests(unittest.TestCase):
                        cwd=self.cwd, env=self.env, check=True, capture_output=True, timeout=30)
 
     def test_model_subprocess_runs_inside_copied_skill(self):
-        html = (self.examples / 'blueprint.html').read_text()
+        research = (self.examples / 'research.json').read_text()
         requests = []
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self):
                 requests.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
-                body = json.dumps({'choices': [{'message': {'content': html}, 'finish_reason': 'stop'}]}).encode()
+                body = json.dumps({'choices': [{'message': {'content': research}, 'finish_reason': 'stop'}]}).encode()
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(body)))
@@ -84,9 +88,9 @@ class PortableSkillTests(unittest.TestCase):
         config = self.root / 'config.json'
         config.write_text(json.dumps({'deployment_config': str(deployment), 'model_arm': 'test',
                                      'credential_dir': str(credentials), 'output_root': str(self.root / 'generated')}))
-        result = self.cli('generate', '--input', str(self.examples / 'request.json'), '--config', str(config))
+        result = self.cli('generate', '--input', str(self.examples / 'research-request.json'), '--config', str(config))
         self.assertEqual(result['status'], 'succeeded')
-        self.assertEqual(result['provenance']['template_version'], 'knowledge-arch-blueprint-v1')
+        self.assertEqual(result['provenance']['template_version'], 'research-v1')
         self.assertEqual(requests[0]['model'], 'test-model')
 
 

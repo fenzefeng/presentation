@@ -22,32 +22,32 @@ class ModelWorkerTests(unittest.TestCase):
         self.deck = json.loads((ROOT / 'examples/deck.json').read_text())
         self.config = configuration()
 
-    def test_html_model_output_is_code_not_json(self):
-        self.request['target_format'] = 'html'
-        html = (ROOT / 'examples/blueprint.html').read_text()
+    def test_html_model_output_is_structured_and_cannot_supply_observations(self):
+        self.request = json.loads((ROOT / 'examples/research-request.json').read_text())
+        research = (ROOT / 'examples/research.json').read_text()
         opener = Mock()
-        opener.open.return_value = self.response(html)
+        opener.open.return_value = self.response(research)
         with patch('presentation_core.model_worker.load_arm', return_value=(
                 {'url': 'https://example.invalid/chat/completions', 'model': 'dummy'}, 'test-secret')), \
                 patch('presentation_core.model_worker.urllib.request.build_opener', return_value=opener):
             result = plan(self.request, self.config)
-        self.assertIsInstance(result, str)
-        self.assertIn('<script id="commodity-runtime">', result)
-        self.assertIn('Content-Security-Policy', result)
+        self.assertEqual(result, json.loads(research))
         self.assertEqual(opener.open.call_count, 1)
         request_body = json.loads(opener.open.call_args.args[0].data)
         self.assertEqual(request_body['thinking'], {'type': 'disabled'})
-        self.assertIn('本次 HTML 模板：knowledge-arch-blueprint', request_body['messages'][0]['content'])
+        model_input = json.loads(request_body['messages'][1]['content'])
+        self.assertNotIn('points', model_input['series'][0])
+        self.assertEqual(model_input['series'][0]['last'], self.request['series'][0]['points'][-1])
 
     def test_invalid_html_is_repaired_once(self):
-        self.request['target_format'] = 'html'
-        html = (ROOT / 'examples/blueprint.html').read_text()
+        self.request = json.loads((ROOT / 'examples/research-request.json').read_text())
+        research = (ROOT / 'examples/research.json').read_text()
         opener = Mock()
-        opener.open.side_effect = [self.response('<div>fragment</div>'), self.response(html)]
+        opener.open.side_effect = [self.response('<div>fragment</div>'), self.response(research)]
         with patch('presentation_core.model_worker.load_arm', return_value=(
                 {'url': 'https://example.invalid/chat/completions', 'model': 'dummy'}, 'test-secret')), \
                 patch('presentation_core.model_worker.urllib.request.build_opener', return_value=opener):
-            self.assertIn('<!doctype html>', plan(self.request, self.config))
+            self.assertEqual(plan(self.request, self.config), json.loads(research))
         self.assertEqual(opener.open.call_count, 2)
 
     def response(self, content):

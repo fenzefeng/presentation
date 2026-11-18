@@ -47,7 +47,7 @@ class ModelPlanner:
                            'invalid_deck', 'invalid_html', 'invalid_request', 'layout_overflow'}
                 code = result['error'] if result['error'] in allowed else 'model_unavailable'
                 raise PresentationError(code, result.get('message', '模型规划失败；请检查配置、连接或材料')[:300])
-            return result['html' if request['target_format'] == 'html' else 'deck']
+            return result['research' if request['target_format'] == 'html' else 'deck']
         finally:
             if proc.poll() is None:
                 proc.terminate()

@@ -2,9 +2,11 @@
 
 版本号见 [SKILL.md](SKILL.md) 的 `metadata.version`；每轮迭代完成时同步递增。
 
-面向中文大宗商品研究的 HTML 与可编辑 PPTX 演示技能。输入已完成的分析正文及来源，输出演示文件；行业分析由宿主完成。本技能不重新查询行情，不负责垂直模型分析。
+面向中文大宗商品研究的 HTML 与可编辑 PPTX 演示技能。输入已完成的分析正文及来源，输出演示文件；行业分析由宿主 Fusion 模型完成。本技能不重新查询行情，不负责垂直模型分析。
 
-HTML 默认使用 knowledge-arch-blueprint 视觉模板，内嵌样式、图表与交互；PPTX 采用独立原生版式，文本、形状、表格及图表可编辑。完整第三方参考库和许可证随 `third_party/` 打包，其他参考模板不会因安装而自动启用。
+HTML 默认生成响应式研究长页，按实际预览宽度重排，离线可用。页面从结论和关键指标开始，有真实时序时提供趋势、筛选和明细。PPTX 采用独立原生版式，文本、形状、表格及图表可编辑。
+
+接入 DataRetrieval 后，可从演示预览下载 PDF。DataRetrieval 从归档的 HTML 导出 PDF，展开数据明细和来源，并为长表格分页。独立 CLI 提供 HTML 和 PPTX 两种输出。
 
 ## 安装到 QwenPaw
 
@@ -35,8 +37,8 @@ python -m pip install -r requirements.txt
 
 ```bash
 python scripts/run.py render \
-  --input scripts/presentation_core/examples/commodity-request.json \
-  --html scripts/presentation_core/examples/commodity.html \
+  --input scripts/presentation_core/examples/research-request.json \
+  --research scripts/presentation_core/examples/research.json \
   --output-root /absolute/private/presentations
 
 python scripts/run.py render \
@@ -56,9 +58,8 @@ python scripts/run.py generate --input /absolute/request.json \
 
 ## 维护与验证
 
-- [模板切换](references/html-templates.md)：默认模板、样式和组件指引。
-- [视觉规范](references/visual-design.md)：图表、单位、版式与验收方式。
-- [接入与迁移](references/integration.md)：模型配置、请求格式和专用工具契约。
+- [接入与迁移](references/integration.md)说明研究数据契约、预览分工和 PDF 导出边界。
+- [旧版模板](references/html-templates.md)和[幻灯片视觉规范](references/visual-design.md)用于维护既有幻灯片。
 
 ```bash
 python -B -m unittest discover -s tests -q

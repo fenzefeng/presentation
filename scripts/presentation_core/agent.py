@@ -26,16 +26,34 @@ def snapshot(message_id, result):
         return None  # Presentation-only history is not a new market analysis.
     if result.get('artifacts') and result.get('outcome') is None:
         return None  # Older presentation-only archives did not store an outcome.
-    sources = []
+    sources, series = [], []
+    archived = result.get('presentation_series') or {}
+    remaining = 1200
     for row in result.get('data_results') or result.get('data') or []:
         if not isinstance(row, dict):
             continue
         title = row.get('cn_name') or row.get('indicator_name') or row.get('name')
         if not title:
             continue
-        description = {k: row[k] for k in ('index_code', 'unit', 'frequency', 'period') if k in row}
-        sources.append({'id': 'D' + str(len(sources) + 1), 'title': str(title)[:160],
+        description = {k: row[k] for k in ('index_code', 'unit', 'frequency', 'period', 'observations_from') if k in row}
+        source_id = 'D' + str(len(sources) + 1)
+        sources.append({'id': source_id, 'title': str(title)[:160],
                         'description': json.dumps(description, ensure_ascii=False)[:1200] or '指标工具返回的证据'})
+        points = row.get('rows') or archived.get(row.get('handle'))
+        unit = row.get('unit')
+        if isinstance(points, (list, tuple)) and points and isinstance(unit, str) and unit.strip() and len(series) < 12 and remaining:
+            try:
+                item = {'source_id': source_id, 'unit': unit.strip()[:80],
+                        'points': [list(point) for point in points[-remaining:]]}
+                frequency = row.get('frequency')
+                if isinstance(frequency, str) and frequency.strip():
+                    item['frequency'] = frequency.strip()[:60]
+                normalize_request({'schema_version': '1.0', 'analysis': '时序',
+                                   'sources': [sources[-1]], 'target_format': 'html', 'series': [item]})
+            except (PresentationError, TypeError):
+                continue  # Keep the source if its historical rows cannot be plotted.
+            series.append(item)
+            remaining -= len(item['points'])
     for field, prefix in (('web_results', 'W'), ('rag_results', 'R')):
         source_number = 0
         for group in result.get(field) or []:
@@ -64,6 +82,8 @@ def snapshot(message_id, result):
     if len(sources) > 30 or len(answer) > 24000:
         return None
     material = {'message_id': message_id, 'analysis': answer, 'sources': sources}
+    if series:
+        material['series'] = series
     try:
         normalize_request({'schema_version': '1.0', 'analysis': answer, 'sources': sources, 'target_format': 'html'})
     except PresentationError:
@@ -133,7 +153,9 @@ class AgentPresentation:
             request = {'schema_version': '1.0', 'analysis': material['analysis'],
                        'sources': material['sources'], 'target_format': target_format,
                        'max_slides': max(3, min(12, max_slides))}
-            if self.context.get('requested_slides') is not None:
+            if material.get('series'):
+                request['series'] = material['series']
+            if target_format == 'pptx' and self.context.get('requested_slides') is not None:
                 request['requested_slides'] = self.context['requested_slides']
                 request['max_slides'] = self.context['requested_slides']
             outcome = self.session.call('model', lambda: self.generator(request, config=config))
@@ -206,7 +228,7 @@ def generate_current(result, *, config_file, run_id, target_format,
         material = None
     if material is None:
         return {'status': 'failed', 'error': 'analysis_unavailable'}
-    if max_slides is None:
+    if max_slides is None and target_format == 'pptx':
         # Cover + source pages + up to seven content pages; capped by the schema.
         max_slides = min(12, max(8, 1 + len(source_pages({'sources': material['sources']})) + 7))
     context = {'config_file': config_file, 'run_id': run_id, 'analysis': material,

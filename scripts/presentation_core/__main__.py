@@ -28,6 +28,7 @@ def main():
         if name == 'render':
             group = cmd.add_mutually_exclusive_group(required=True)
             group.add_argument('--deck', help='PPTX 离线演示结构 JSON')
+            group.add_argument('--research', help='HTML 离线研究结构 JSON')
             group.add_argument('--html', help='已生成的完整 HTML 文件')
     args = parser.parse_args()
     cancel = threading.Event()
@@ -43,16 +44,16 @@ def main():
         if args.format:
             request['target_format'] = args.format
         if args.action == 'render':
-            fmt = 'html' if args.html else 'pptx'
+            fmt = 'html' if args.html or args.research else 'pptx'
             if args.format and args.format != fmt:
-                raise PresentationError('invalid_request', '--html 对应 html，--deck 对应 pptx')
+                raise PresentationError('invalid_request', '--html / --research 对应 html，--deck 对应 pptx')
             request['target_format'] = fmt
             if args.html:
                 if Path(args.html).stat().st_size > 262144:
                     raise PresentationError('invalid_html', 'HTML 文件超过大小限制')
                 content = Path(args.html).read_text(encoding='utf-8')
             else:
-                content = read_json(args.deck)
+                content = read_json(args.research or args.deck)
             result = render(request, content, config=config, cancel=cancel)
         else:
             result = generate(request, config=config, cancel=cancel)

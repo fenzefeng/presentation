@@ -33,9 +33,10 @@ class PresentationSkill(AgentPresentation):
             return {'status': 'failed', 'error': 'analysis_not_available'}
         selected = [by_id[mid] for mid in message_ids]
         # Bound an individual observation without silently truncating a material.
-        if len(json.dumps(selected, ensure_ascii=False)) > 14000:
+        summaries = [{k: v for k, v in material.items() if k != 'series'} for material in selected]
+        if len(json.dumps(summaries, ensure_ascii=False)) > 14000:
             return {'status': 'failed', 'error': 'read_fewer_messages'}
-        return {'materials': selected}
+        return {'materials': summaries}
 
     def generate(self, analysis_message_ids, target_format, analysis_text=''):
         with self.selection_lock:
@@ -62,13 +63,18 @@ class PresentationSkill(AgentPresentation):
             selected.append(current)
         if not selected:
             return {'status': 'failed', 'error': 'analysis_required'}
-        sources, bodies = [], []
+        sources, bodies, series = [], [], []
         for index, material in enumerate(selected, 1):
             body = material['analysis']
+            source_map = {}
             for source in material['sources']:
                 identifier = 'M%d_%s' % (index, source['id'])
+                if len(identifier) > 64:
+                    identifier = 'M%d_%s' % (index, hashlib.sha256(source['id'].encode()).hexdigest()[:24])
+                source_map[source['id']] = identifier
                 body = body.replace('[' + source['id'] + ']', '[' + identifier + ']')
                 sources.append(dict(source, id=identifier))
+            series.extend(dict(item, source_id=source_map[item['source_id']]) for item in material.get('series', []))
             bodies.append('### 材料 %d\n%s' % (index, body))
         body = '\n\n'.join(bodies)
         if len(body) > 24000 or len(sources) > 30:
@@ -76,6 +82,11 @@ class PresentationSkill(AgentPresentation):
                     'guidance': '请缩小消息范围，不能静默省略历史正文或来源。'}
         identity = hashlib.sha256(json.dumps([m['message_id'] for m in selected]).encode()).hexdigest()[:24]
         material = {'message_id': 'cm_selection_' + identity, 'analysis': body, 'sources': sources}
+        if series:
+            if len(series) > 12 or sum(len(item['points']) for item in series) > 1200:
+                return {'status': 'failed', 'error': 'material_budget_exceeded',
+                        'guidance': '观测点超出展示上限，请缩小消息范围。'}
+            material['series'] = series
         # A changed selection after generation cannot publish a second file.
         if self.called and self.context.get('analysis') != material:
             return {'status': 'failed', 'error': 'presentation_limit'}

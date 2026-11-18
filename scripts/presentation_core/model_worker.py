@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .contracts import ROOT, PresentationError, checked_deck, pages, schema, source_pages
+from .contracts import ROOT, PresentationError, checked_deck, checked_research, pages, schema, source_pages
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -64,14 +64,12 @@ def repair_deck_syntax(content):
 def plan(request, config):
     arm, secret = load_arm(config)
     html_mode = request['target_format'] == 'html'
-    prompt_file = 'html.md' if html_mode else 'planner.md'
+    prompt_file = 'research.md' if html_mode else 'planner.md'
     prompt = (ROOT / 'prompts' / prompt_file).read_text().split('```text\n', 1)[1].split('```', 1)[0]
     if html_mode:
-        from .html_templates import selected, instructions
-        html_template = selected()
-        prompt += '\n' + instructions(html_template)
+        prompt += '\n输出 Schema：\n' + json.dumps(schema('research'), ensure_ascii=False, separators=(',', ':'))
     max_slides = request.get('max_slides', 8)
-    if request.get('requested_slides') is not None:
+    if not html_mode and request.get('requested_slides') is not None:
         prompt += '\n本次演示总页数必须恰好为 ' + str(request['requested_slides']) + ' 页，包含封面和来源页。'
     content_limit = None
     if not html_mode:
@@ -89,8 +87,22 @@ def plan(request, config):
                    '：内容页最多 ' + str(content_limit) + ' 页；封面和 ' + str(source_count) +
                    ' 页来源由程序追加。'
                    '\n输出 Schema：\n' + json.dumps(deck_schema, ensure_ascii=False, separators=(',', ':')))
+    material = dict(request)
+    if html_mode:
+        material.pop('max_slides', None)
+        material.pop('requested_slides', None)
+    if material.get('series'):
+        # The renderer reads every original observation from the request. The
+        # model only needs the recorded range and a few values for context.
+        material['series'] = [
+            {**{k: v for k, v in item.items() if k != 'points'},
+             'observations': len(item['points']), 'first': item['points'][0],
+             'last': item['points'][-1],
+             **({'points': item['points']} if not html_mode and len(item['points']) <= 12 else {})}
+            for item in material['series']
+        ]
     messages = [{'role': 'system', 'content': prompt},
-                {'role': 'user', 'content': json.dumps(request, ensure_ascii=False)}]
+                {'role': 'user', 'content': json.dumps(material, ensure_ascii=False)}]
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
     for attempt in range(config['max_model_attempts']):
         # Conservative UTF-8 byte budget, NOT an exact vendor token count.
@@ -132,19 +144,13 @@ def plan(request, config):
             raise PresentationError('invalid_html' if html_mode else 'invalid_deck', '模型响应不是完整内容') from None
         try:
             if html_mode:
-                from .render_html import Document, normalize
-                html = normalize(content, request, template=html_template['name'])[0]
-                doc = Document()
-                doc.feed(html)
-                if not doc.commodity:
-                    raise PresentationError('invalid_html', '新演示必须包含 meta name="presentation-theme" content="commodity-v2"，使用给定语义组件，由程序注入统一主题')
-                return html
+                return checked_research(request, json.loads(content))
             deck = json.loads(repair_deck_syntax(content))
             deck, _ = checked_deck(request, deck)
             pages(request, deck)
             return deck
         except (ValueError, PresentationError) as exc:
-            code = exc.code if isinstance(exc, PresentationError) else 'invalid_deck'
+            code = exc.code if isinstance(exc, PresentationError) else ('invalid_html' if html_mode else 'invalid_deck')
             if attempt + 1 >= config['max_model_attempts']:
                 message = exc.message if isinstance(exc, PresentationError) else '模型内容不是有效 JSON'
                 raise PresentationError(code, message) from None
@@ -152,17 +158,13 @@ def plan(request, config):
             if code == 'layout_overflow' and not html_mode:
                 hint = ('；内容页最多 ' + str(content_limit) + ' 页，表格含表头最多 5 行且每格文字更短，'
                         '要点页合计不超过 12 行')
-            elif code == 'layout_overflow' and html_mode:
-                hint = ('；整个 HTML 最多 ' + str(max_slides) +
-                        ' 个 section.slide，包含封面和来源页，请合并或删减内容页')
             elif code == 'invalid_deck':
                 hint = '；表格最多 5 列（headers 和每行最多 5 项），版式必须与块类型匹配'
             messages.extend([{'role': 'assistant', 'content': content},
                              {'role': 'user', 'content': '结构校验失败：' + code +
                               ('；' + exc.message if isinstance(exc, PresentationError) else '') +
                               hint +
-                              '。请按原材料修复结构、保留完整来源，不增加事实。只返回' +
-                              ('完整 HTML 文档。' if html_mode else ' JSON。')}])
+                              '。请按原材料修复结构、保留完整来源，不增加事实。只返回 JSON。'}])
     raise PresentationError('invalid_deck', '模型规划失败')
 
 
@@ -172,7 +174,7 @@ def main():
         if len(raw.encode()) > 524288:
             raise PresentationError('invalid_request', '请求过大')
         payload = json.loads(raw)
-        field = 'html' if payload['request']['target_format'] == 'html' else 'deck'
+        field = 'research' if payload['request']['target_format'] == 'html' else 'deck'
         result = {field: plan(payload['request'], payload['config'])}
     except PresentationError as exc:
         result = {'error': exc.code, 'message': exc.message}

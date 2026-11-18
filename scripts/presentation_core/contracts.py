@@ -33,7 +33,8 @@ def validate(name, value):
         if exc.validator in ('maxItems', 'minItems', 'maxLength', 'minLength',
                              'enum', 'const', 'type', 'required', 'pattern'):
             detail += f'（{exc.validator}={exc.validator_value}）'
-        raise PresentationError('invalid_request' if name == 'request' else 'invalid_deck',
+        code = {'request': 'invalid_request', 'research': 'invalid_html'}.get(name, 'invalid_deck')
+        raise PresentationError(code,
                                 detail) from None
 
 
@@ -51,7 +52,33 @@ def normalize_request(value):
     ids = [s['id'] for s in value['sources']]
     if len(set(ids)) != len(ids):
         raise PresentationError('invalid_request', '来源 ID 重复')
+    series = value.get('series', [])
+    series_ids = [item['source_id'] for item in series]
+    if len(set(series_ids)) != len(series_ids) or set(series_ids) - set(ids):
+        raise PresentationError('invalid_request', '时序来源不存在或重复')
+    if sum(len(item['points']) for item in series) > 1200:
+        raise PresentationError('invalid_request', '可展示的观测点总数超过 1200')
+    for item in series:
+        points = item['points']
+        if not item['unit'].strip() or len({day for day, _ in points}) != len(points) or any(
+                abs(number) > 1e100 or not math.isfinite(number) for _, number in points):
+            raise PresentationError('invalid_request', '时序单位、日期或数值无效')
+        points.sort(key=lambda point: point[0])
     return value
+
+
+def checked_research(request, research):
+    validate('research', research)
+    source_ids = {source['id'] for source in request['sources']}
+    series_ids = {item['source_id'] for item in request.get('series', [])}
+    if set(research.get('focus_ids', [])) - series_ids or any(
+            set(item.get('source_ids', [])) - source_ids for item in research['insights']):
+        raise PresentationError('invalid_html', '研究内容引用了未提供的来源或指标')
+    fields = [research['title'], research['conclusion']]
+    fields.extend(field for item in research['insights'] for field in (item['heading'], item['text']))
+    if any(not field.strip() for field in fields):
+        raise PresentationError('invalid_html', '研究标题、结论或解读不能为空白')
+    return research
 
 
 def width(text):

@@ -217,11 +217,18 @@
           "artifacts": {
             "minItems": 1
           },
-          "slide_count": {
-            "minimum": 3
-          },
           "error": {
             "type": "null"
+          },
+          "slide_count": {
+            "anyOf": [
+              {
+                "const": 0
+              },
+              {
+                "minimum": 3
+              }
+            ]
           }
         }
       },

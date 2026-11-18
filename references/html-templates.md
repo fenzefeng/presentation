@@ -1,4 +1,6 @@
-# 更换 HTML 参考模板
+# 维护旧版 HTML 幻灯片模板
+
+v0.2 起，新生成的 HTML 使用研究页组件 `render_research.py`、`visuals/research.css` 和 `visuals/research.js`。本页的模板选择仅适用于离线规范化旧版 HTML（`render --html`）。生成研究页请用 `generate --format html`，或用 `render --research` 渲染备好的结构化内容。
 
 HTML 模板在展示阶段生效，不修改 Fusion 的问题路由、分析提示词、垂直模型调用或分析正文。PPTX 是独立的可编辑原生渲染，切换 HTML 模板不会自动改变 PPTX。
 
@@ -12,7 +14,7 @@ HTML 模板在展示阶段生效，不修改 Fusion 的问题路由、分析提�
 
 当前默认使用该蓝图模板。恢复之前的中文产业研报主题时改为 `commodity-v2`。不要修改私有配置中的 template_version 来切 HTML 模板；那个字段沿用 PPTX 渲染版本契约。
 
-注册表保存模板的 body_class、styles、prompt 和 version；upstream 来源路径相对于本 skill 根目录。生成时，model_worker 读取对应的组件指引，render_html 将对应 CSS 与离线交互内嵌到单文件。最终文件记录 presentation-template 元信息，重复规范化保留该文件已选模板，不会因为之后切换默认值而自动换肤；以前已经下载/归档的文件不改写。没有模板元信息的旧式受管 HTML 在重新渲染时使用当时的默认模板。
+注册表保存模板的 body_class、styles、prompt 和 version；upstream 来源路径相对于本 skill 根目录。旧文档规范化时，render_html 将对应 CSS 与离线交互内嵌到单文件。已经记录 presentation-template 的文件保留模板，缺少该标识的旧式受管 HTML 在重新渲染时使用注册表的默认值。
 
 ## 这次实际使用的蓝图资源
 

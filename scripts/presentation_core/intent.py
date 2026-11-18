@@ -15,6 +15,8 @@ def presentation_target(question: str):
     text = question or ''
     if not _PRESENTATION.search(text) or _NEGATED.search(text):
         return None
+    if re.search(r'(HTML|网页)', text, re.IGNORECASE):
+        return 'html'
     if re.search(r'(PPTX?|幻灯片|演示文稿|powerpoint)', text, re.IGNORECASE):
         return 'pptx'
     return 'html'
@@ -74,4 +76,4 @@ def presentation_request(question: str):
             analysis = '请根据以下材料进行分析：' + supplied
     error = 'ambiguous_analysis_request' if analysis and _PRESENTATION.search(analysis) else None
     return {'target_format': target, 'analysis_question': analysis,
-            'requested_slides': count, 'error': error}
+            'requested_slides': count if target == 'pptx' else None, 'error': error}

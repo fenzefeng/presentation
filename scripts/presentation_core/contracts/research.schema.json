@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fusion:presentation:research:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "conclusion", "insights"],
+  "properties": {
+    "title": {"type": "string", "minLength": 1, "maxLength": 80},
+    "conclusion": {"type": "string", "minLength": 1, "maxLength": 140},
+    "focus_ids": {
+      "type": "array", "maxItems": 3, "uniqueItems": true,
+      "items": {"type": "string", "maxLength": 64}
+    },
+    "insights": {
+      "type": "array", "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["heading", "text"],
+        "properties": {
+          "heading": {"type": "string", "minLength": 1, "maxLength": 72},
+          "text": {"type": "string", "minLength": 1, "maxLength": 850},
+          "source_ids": {
+            "type": "array", "maxItems": 8, "uniqueItems": true,
+            "items": {"type": "string", "maxLength": 64}
+          }
+        }
+      }
+    }
+  }
+}

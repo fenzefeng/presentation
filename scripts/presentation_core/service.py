@@ -81,7 +81,7 @@ def run(request, *, content=None, config=None, planner=None, cancel=None):
         'slide_count': 0, 'artifacts': [], 'warnings': [], 'error': None,
         'provenance': {'mode': mode, 'model_arm': cfg['model_arm'] if mode == 'model' else None,
                        'template_version': 'direct-html-v1' if html_mode else cfg['template_version'],
-                       'planner_version': ('html-v2' if html_mode else cfg['planner_version']) if mode == 'model' else None},
+                       'planner_version': ('research-v1' if html_mode else cfg['planner_version']) if mode == 'model' else None},
     }
 
     def checkpoint(stage):
@@ -105,7 +105,15 @@ def run(request, *, content=None, config=None, planner=None, cancel=None):
             content = planner.plan(request, deadline=deadline, cancel=cancel)
         checkpoint('validating')
         fmt = request['target_format']
-        if html_mode:
+        if html_mode and isinstance(content, dict) and ('slides' not in content or mode == 'model'):
+            from . import render_research as renderer
+            view = renderer.document(request, content)
+            slide_count = 0
+            result['provenance']['template_version'] = 'research-v1'
+            result['warnings'] = ['review_required'] + ([] if request['sources'] else ['sources_missing'])
+            mime = 'text/html'
+            write_json(temp / 'research.json', content)
+        elif html_mode:
             from . import render_html as renderer
             content, slide_count = renderer.normalize(content, request)
             if '<style id="commodity-theme">' in content:

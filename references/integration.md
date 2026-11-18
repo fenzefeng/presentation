@@ -13,7 +13,7 @@ presentation/
     run.py
     presentation_core/
       service.py / planner.py / model_worker.py
-      render_html.py / render_pptx.py
+      render_research.py / render_html.py / render_pptx.py
       agent.py / runtime.py / contracts.py
       contracts/ / prompts/ / visuals/ / examples/
   references/integration.md
@@ -22,7 +22,7 @@ presentation/
 
 生成核心、材料快照、来源合并和生成执行器不导入 Fusion，也不要求 MySQL、Redis、QwenPaw 或 AgentScope。复制这个完整目录即可携带实现；仍需在目标 Python 环境安装 requirements、配置模型与凭据。模型通过 skill 决策，实际生成由这些脚本执行，并不是只靠 SKILL.md 生成文件。
 
-中文大宗商品视觉主题和离线交互资源也随包复制。HTML 将资源内嵌到最终单文件，PPTX 使用可编辑原生图表，不需要参考项目或浏览器依赖才能生成。组件选择、合成示例与视觉验收见 [视觉设计与检查](visual-design.md)。旧版本配置名兼容映射到新版，无须修改数据库或模型接口。
+HTML 将研究页样式和交互内嵌到单文件，PPTX 使用可编辑原生图表。生成两种格式都不要求浏览器依赖。旧版 HTML 仍可离线渲染。旧版本配置名兼容映射到新版，无须修改数据库结构或模型接口。
 
 本项目的宿主适配保留在 Fusion：`fusion/runtime/presentation.py` 加载项目 skill 的同一份代码、注册 AgentScope 工具，装配私有任务上下文并处理执行/下载；`fusion/runtime/presentation_stage.py` 隔离可选演示子进程及截止时间；`fusion/chat/presentation_history.py` 读取授权会话并归档。无需将这些适配和 Fusion 的数据库、队列或登录系统复制到其他项目。
 
@@ -35,8 +35,8 @@ python -m pip install -r /target/skills/presentation/requirements.txt
 
 # 不调用模型，先验证生成环境；PPTX 改为 --deck .../deck.json
 python /target/skills/presentation/scripts/run.py render \
-  --input /target/skills/presentation/scripts/presentation_core/examples/request.json \
-  --html /target/skills/presentation/scripts/presentation_core/examples/presentation.html \
+  --input /target/skills/presentation/scripts/presentation_core/examples/research-request.json \
+  --research /target/skills/presentation/scripts/presentation_core/examples/research.json \
   --output-root /absolute/private/output
 
 # 调用目标项目配置的模型生成 HTML 或 PPTX
@@ -63,13 +63,26 @@ result = generate({
     'analysis': analysis_text,
     'sources': sources,
     'target_format': 'html',
-    'max_slides': 8,
+    'series': series,
 }, config=presentation_config)
 ```
 
 配置中的 deployment_config 包含 arms（模型 URL、模型名、凭据文件名）；credential_dir 和 output_root 使用目标机器的私有目录。也可传入具有 `plan(request, *, deadline, cancel)` 方法的 planner，使用目标项目自己的模型客户端。不要复制实际密钥、数据库或本机部署配置。
 
-完整请求、结果与 Deck schema 在 scripts/presentation_core/contracts/；已有 HTML/Deck 可用 `presentation_core.render` 渲染，不调用模型。
+请求、结果、研究内容及 PPTX Deck 的 schema 位于 `scripts/presentation_core/contracts/`。可选的 `series` 由宿主提供，每项有 `source_id`、`unit`、`points`（日期与数值列表）及可选的 `frequency`。HTML 直接使用观测值，模型只提交标题、结论、优先展示的指标 ID 和解读。PPTX 用同一请求规划固定画幅；页数参数只作用于 PPTX 和显式传入的旧式 HTML 文件。新研究页的结果沿用 `slide_count` 字段，值为 0。
+
+## 预览和 PDF 交付边界
+
+| 层 | 职责 |
+| --- | --- |
+| Skill | 生成连续研究页、离线筛选与明细，并维护样式、来源和打印排版。页面用容器查询适配 iframe 实际宽度。 |
+| 宿主后端 | 从已完成分析中保留有界的原始观测，按现有会话权限提供附件。Fusion 最多保留 12 项、1200 个观测，每个读数窗口取最近 200 个原始点。旧归档没有逐点数据时保留来源和定性解读。预览仅放行对应已安装资源的脚本哈希。 |
+| 宿主前端 | 承载隔离 iframe，管理侧栏拖动、放大、还原，以及 HTML 和 PDF 下载。 |
+| DataRetrieval PDF 导出 | 按附件 ID 校验访问权限，用隔离浏览器读取归档 HTML。导出时展开明细与来源，长表格按行分页并重复表头。PDF 使用归档研究页的默认视图。 |
+
+外部 DATA 路由偶尔仅在已完成答复中返回带单位的 Markdown 日期表。Fusion 在其指标编码、单位、日期范围和日期读数能与外部服务的验证结果匹配时，保留表格中的点供演示复用。来源区注明这些观测取自答复表格。
+
+PDF 导出由 DataRetrieval 宿主提供，可对已有 HTML 附件重新导出，无需再次调用展示模型。其他宿主可根据需要接入同类功能。
 
 ## Agent 工具契约
 
