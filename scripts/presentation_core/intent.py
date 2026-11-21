@@ -40,10 +40,14 @@ def presentation_request(question: str):
     if target is None:
         return None
     text = (question or '').strip()
-    generation = re.search(r'制作|生成|做成|做为|做个|做一|转为|转成|转换|整理|输出|给出|提供|想要|需要|演示一下|(?:用|以|采用).{0,12}(?:PPT|HTML|演示|幻灯片)', text, re.I)
-    if generation is None and not re.fullmatch(r'(?:请)?\s*(?:\d+页)?\s*(?:PPTX?|HTML|幻灯片|演示)', text, re.I):
+    page_count = r'(\d+|[一二三四五六七八九十两]+)\s*(?:页|张)'
+    generation = re.search(
+        rf'制作|生成|做成|做为|做个|做一|做\s*(?={page_count})|转为|转成|转换|整理|输出|给出|提供|想要|需要|演示一下|(?:用|以|采用).{{0,12}}(?:PPT|HTML|演示|幻灯片)',
+        text, re.I)
+    if generation is None and not re.fullmatch(
+            rf'(?:请)?\s*(?:{page_count}\s*的?\s*)?(?:PPTX?|HTML|幻灯片|演示)(?:\s*{page_count})?', text, re.I):
         return None
-    count_match = re.search(r'(?<!第)(\d+|[一二三四五六七八九十两]+)\s*(?:页|张)', text)
+    count_match = re.search(r'(?<!第)' + page_count, text)
     count = None
     if count_match:
         value = count_match[1]
@@ -58,7 +62,7 @@ def presentation_request(question: str):
             else:
                 count = digits.get(value)
     fmt = r'(?:HTML|PPTX?|PowerPoint|幻灯片|演示文稿|演示|网页|slides?|deck)(?:演示|文稿|文件|页面)?'
-    pages = r'(?:\d+|[一二三四五六七八九十两]+)\s*(?:页|张)\s*(?:的)?\s*'
+    pages = page_count + r'\s*(?:的)?\s*'
     qualifier = r'(?:(?:中文|精美|简洁|离线|可下载|一个|一份|一套|一版|的)\s*)*'
     display = r'(?:' + pages + r')?' + qualifier + fmt + r'(?:\s*(?:的)?\s*' + pages + r')?'
     action = r'(?:制作|生成|做成|做为|做|输出|整理|转换|转|给出|提供)(?:成|为)?\s*'

@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .contracts import ROOT, PresentationError, checked_deck, checked_research, pages, schema, source_pages
+from .contracts import ROOT, PresentationError, checked_deck, checked_research, pages, schema
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -68,25 +68,18 @@ def plan(request, config):
     prompt = (ROOT / 'prompts' / prompt_file).read_text().split('```text\n', 1)[1].split('```', 1)[0]
     if html_mode:
         prompt += '\n输出 Schema：\n' + json.dumps(schema('research'), ensure_ascii=False, separators=(',', ':'))
-    max_slides = request.get('max_slides', 8)
-    if not html_mode and request.get('requested_slides') is not None:
-        prompt += '\n本次演示总页数必须恰好为 ' + str(request['requested_slides']) + ' 页，包含封面和来源页。'
-    content_limit = None
-    if not html_mode:
-        source_count = len(source_pages(request))
-        content_limit = max_slides - 1 - source_count
-        if content_limit < 1:
-            raise PresentationError('invalid_request', '来源页数超过 max_slides 预算')
-        content_limit = min(10, content_limit)
+    else:
+        requested = request.get('requested_slides')
+        content_limit = requested if requested is not None else request.get('max_slides', 8)
         deck_schema = schema('deck')
         # The schema shown to the model carries this request's real page budget.
         deck_schema['properties']['slides']['maxItems'] = content_limit
-        if request.get('requested_slides') is not None:
-            deck_schema['properties']['slides']['minItems'] = content_limit
-        prompt += ('\n本次 max_slides=' + str(max_slides) +
-                   '：内容页最多 ' + str(content_limit) + ' 页；封面和 ' + str(source_count) +
-                   ' 页来源由程序追加。'
-                   '\n输出 Schema：\n' + json.dumps(deck_schema, ensure_ascii=False, separators=(',', ':')))
+        if requested is not None:
+            deck_schema['properties']['slides']['minItems'] = requested
+            prompt += f'\n本次演示总页数必须恰好为 {requested} 页。'
+        else:
+            prompt += f'\n本次演示最多 {content_limit} 页。'
+        prompt += '\n输出 Schema：\n' + json.dumps(deck_schema, ensure_ascii=False, separators=(',', ':'))
     material = dict(request)
     if html_mode:
         material.pop('max_slides', None)
@@ -164,7 +157,7 @@ def plan(request, config):
                              {'role': 'user', 'content': '结构校验失败：' + code +
                               ('；' + exc.message if isinstance(exc, PresentationError) else '') +
                               hint +
-                              '。请按原材料修复结构、保留完整来源，不增加事实。只返回 JSON。'}])
+                              '。请按原材料修复结构，保留已有数据口径，只返回 JSON。'}])
     raise PresentationError('invalid_deck', '模型规划失败')
 
 

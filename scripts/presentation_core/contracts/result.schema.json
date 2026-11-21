@@ -219,16 +219,6 @@
           },
           "error": {
             "type": "null"
-          },
-          "slide_count": {
-            "anyOf": [
-              {
-                "const": 0
-              },
-              {
-                "minimum": 3
-              }
-            ]
           }
         }
       },
@@ -271,6 +261,31 @@
               "code",
               "message"
             ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "artifacts": {
+            "contains": {
+              "properties": {
+                "format": {"const": "pptx"}
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "slide_count": {"minimum": 1}
+        }
+      },
+      "else": {
+        "properties": {
+          "slide_count": {
+            "anyOf": [{"const": 0}, {"minimum": 3}]
           }
         }
       }

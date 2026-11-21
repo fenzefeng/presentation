@@ -78,13 +78,16 @@ class VisualTests(unittest.TestCase):
             self.assertEqual(result['status'], 'succeeded', result.get('error'))
             file = Path(result['artifacts'][0]['local_path'])
             prs = Presentation(file)
-            chart = next(s.chart for s in prs.slides[3].shapes if s.has_chart)
+            self.assertEqual(len(prs.slides), len(self.deck['slides']))
+            chart = next(s.chart for s in prs.slides[2].shapes if s.has_chart)
             self.assertEqual(list(chart.series[0].values), [14800, 14650, 14550, 14480])
             self.assertEqual([c.label for c in chart.plots[0].categories], ['周1', '周2', '周3', '周4'])
             self.assertEqual(chart.value_axis.minimum_scale, 14400)
             self.assertEqual(chart.value_axis.maximum_scale, 15000)
-            self.assertIn('纵轴非零起点', '\n'.join(s.text for s in prs.slides[3].shapes if s.has_text_frame))
-            self.assertEqual(prs.slides[3].notes_slide.notes_text_frame.text, self.deck['slides'][2]['speaker_notes'])
+            self.assertIn('纵轴非零起点', '\n'.join(s.text for s in prs.slides[2].shapes if s.has_text_frame))
+            self.assertEqual(prs.slides[2].notes_slide.notes_text_frame.text, self.deck['slides'][2]['speaker_notes'])
+            last_slide_titles = [shape.text for shape in prs.slides[-1].shapes if shape.has_text_frame]
+            self.assertIn(self.deck['slides'][-1]['title'], last_slide_titles)
             with ZipFile(file) as archive:
                 self.assertTrue(any(n.startswith('ppt/embeddings/') and n.endswith('.xlsx') for n in archive.namelist()))
             for slide in prs.slides:
@@ -101,7 +104,7 @@ class VisualTests(unittest.TestCase):
             result = render({**self.request, 'target_format': 'pptx'}, self.deck, config={'output_root': tmp})
             self.assertEqual(result['status'], 'succeeded', result.get('error'))
             prs = Presentation(result['artifacts'][0]['local_path'])
-            chart = next(s.chart for s in prs.slides[3].shapes if s.has_chart)
+            chart = next(s.chart for s in prs.slides[2].shapes if s.has_chart)
             self.assertEqual(list(chart.series[0].values), [-150, -100, 0, 70])
             self.assertLessEqual(chart.value_axis.minimum_scale, -150)
             self.assertGreaterEqual(chart.value_axis.maximum_scale, 70)
@@ -120,7 +123,7 @@ class VisualTests(unittest.TestCase):
             normalize(self.html, request)
         with self.assertRaises(PresentationError):
             checked_deck(request, self.deck)
-        deck = {**self.deck, 'slides': self.deck['slides'][1:3]}
+        deck = {**self.deck, 'slides': self.deck['slides'][:4]}
         accepted, _ = checked_deck(request, deck)
         self.assertEqual(len(pages(request, accepted)), 4)
         sections = re.findall(r'<section class="slide[\s\S]*?</section>', self.html)

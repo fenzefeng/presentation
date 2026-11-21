@@ -48,6 +48,10 @@ body[data-theme=commodity].tpl-knowledge-arch-blueprint .slide.cover{background:
 .tpl-knowledge-arch-blueprint .research-table th{background:var(--kb-ink)}
 .tpl-knowledge-arch-blueprint .research-table tr:nth-child(even) td{background:#f5f0e8}
 .tpl-knowledge-arch-blueprint .bullet-list li,.tpl-knowledge-arch-blueprint .source-item{border-color:var(--kb-ink)}
+@media screen and (min-width:601px){
+ .tpl-knowledge-arch-blueprint .kb-cover-top{grid-template-columns:minmax(0,1fr);gap:20px}
+ .tpl-knowledge-arch-blueprint .kb-insight{margin-top:0}
+}
 @media screen and (max-width:600px){
  body[data-theme=commodity].tpl-knowledge-arch-blueprint .slide{padding:30px 22px 105px}
  body[data-theme=commodity].tpl-knowledge-arch-blueprint .slide.cover{padding-right:22px}

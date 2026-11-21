@@ -8,7 +8,7 @@ import threading
 import time
 from pathlib import Path
 
-from .contracts import PresentationError, normalize_request, source_pages
+from .contracts import PresentationError, normalize_request
 from .service import generate
 
 # A combined answer keeps its analysis outcome while carrying an attachment;
@@ -152,7 +152,7 @@ class AgentPresentation:
                 max_slides = 8
             request = {'schema_version': '1.0', 'analysis': material['analysis'],
                        'sources': material['sources'], 'target_format': target_format,
-                       'max_slides': max(3, min(12, max_slides))}
+                       'max_slides': max(1, min(12, max_slides))}
             if material.get('series'):
                 request['series'] = material['series']
             if target_format == 'pptx' and self.context.get('requested_slides') is not None:
@@ -228,9 +228,6 @@ def generate_current(result, *, config_file, run_id, target_format,
         material = None
     if material is None:
         return {'status': 'failed', 'error': 'analysis_unavailable'}
-    if max_slides is None and target_format == 'pptx':
-        # Cover + source pages + up to seven content pages; capped by the schema.
-        max_slides = min(12, max(8, 1 + len(source_pages({'sources': material['sources']})) + 7))
     context = {'config_file': config_file, 'run_id': run_id, 'analysis': material,
                'max_slides': max_slides}
     if isinstance(timeout_seconds, int) and timeout_seconds > 0:

@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 from presentation_core import generate, render
 from presentation_core.contracts import ROOT, PresentationError, normalize_request, validate
+from presentation_core.intent import presentation_request
 
 
 class GenerationTests(unittest.TestCase):
@@ -39,15 +40,28 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(file.stat().st_mode & 0o777, 0o600)
         self.assertFalse(list(Path(self.temp.name).glob('.*.tmp')))
 
-    def test_native_pptx_has_editable_text_and_notes(self):
+    def test_single_slide_pptx_combines_report_heading_and_editable_content(self):
         from pptx import Presentation
-        self.request['target_format'] = 'pptx'
+        for question in ('一页PPT', '做 1 页 PPT', '把上面的分析做成一页PPT'):
+            with self.subTest(question=question):
+                intent = presentation_request(question)
+                self.assertEqual(intent['target_format'], 'pptx')
+                self.assertEqual(intent['requested_slides'], 1)
+        self.request.update(target_format='pptx', max_slides=1, requested_slides=1)
+        self.deck['subtitle'] = '合成演示，非真实行情'
         result = render(self.request, self.deck, config=self.config)
         self.assertEqual(result['status'], 'succeeded')
         prs = Presentation(result['artifacts'][0]['local_path'])
-        self.assertEqual(len(prs.slides), 3)
-        self.assertIn('供应', '\n'.join(s.text for s in prs.slides[1].shapes if s.has_text_frame))
-        self.assertEqual(prs.slides[1].notes_slide.notes_text_frame.text, self.deck['slides'][0]['speaker_notes'])
+        self.assertEqual(result['slide_count'], 1)
+        self.assertEqual(len(prs.slides), 1)
+        slide = prs.slides[0]
+        texts = [shape.text for shape in slide.shapes if shape.has_text_frame]
+        self.assertIn(self.request['title'], texts)
+        self.assertIn(self.deck['subtitle'], texts)
+        self.assertIn(self.deck['slides'][0]['title'], texts)
+        self.assertIn('供应与需求应结合观察。', texts)
+        self.assertIn('01 / 01', texts)
+        self.assertEqual(slide.notes_slide.notes_text_frame.text, self.deck['slides'][0]['speaker_notes'])
 
     def test_research_puts_numbers_in_the_summary_below_the_headline(self):
         request = json.loads((ROOT / 'examples/research-request.json').read_text())
@@ -86,7 +100,7 @@ class GenerationTests(unittest.TestCase):
         self.request['target_format'] = 'pptx'
         result = render(self.request, self.deck, config=self.config)
         self.assertEqual(result['status'], 'succeeded', result.get('error'))
-        self.assertEqual(result['slide_count'], 5)
+        self.assertEqual(result['slide_count'], 3)
 
     def test_five_column_table_is_supported(self):
         self.deck['slides'].append({
@@ -173,7 +187,7 @@ class GenerationTests(unittest.TestCase):
 
     def test_overflow_rejected(self):
         self.request['target_format'] = 'pptx'
-        self.deck['slides'] *= 7
+        self.deck['slides'] *= 9
         result = render(self.request, self.deck, config=self.config)
         self.assertEqual(result['error']['code'], 'layout_overflow')
 

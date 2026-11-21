@@ -109,6 +109,13 @@ body[data-theme=commodity] .slide.cover{background:var(--ink);color:#f7f5ef;just
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
 }
+@media screen and (min-width:601px){
+body[data-theme=commodity] .deck{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(var(--deck-scale,1))}
+body[data-theme=commodity] .slide.cover{padding-inline:64px;text-align:center}
+.cover h1,.cover .lede{max-width:none}
+.cover .rule{margin-inline:auto}
+.cover::before,.cover::after{display:none}
+}
 @media screen and (max-width:600px){body[data-theme=commodity]{display:block;height:auto;min-height:100svh;overflow:auto;background:var(--paper)}
 body[data-theme=commodity] .deck{width:100%;height:auto;min-height:100svh;transform:none;box-shadow:none}
 body[data-theme=commodity] .slide{position:relative;min-height:100svh;padding:30px 22px 105px;overflow:visible}

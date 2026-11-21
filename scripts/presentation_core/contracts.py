@@ -120,55 +120,12 @@ def wrap(text, columns):
     return lines
 
 
-SOURCE_COLUMNS = 45
-SOURCE_PAGE_LINES = 16
 # Tables use a smaller face and the full remaining slide height; text pages stay 22pt.
 TABLE_FONT_SIZE = 14
 TABLE_COLUMNS = 54
 TABLE_HEIGHT = 4.7
 TABLE_ROW_BASE = .2
 TABLE_ROW_LINE = .29 * TABLE_FONT_SIZE / 18
-
-
-def source_line(source):
-    """Compact, deterministic source-page line; full descriptions stay in request.json."""
-    parts = [f"[{source['id']}] {source['title']}"]
-    try:
-        meta = json.loads(source['description'])
-    except (TypeError, ValueError):
-        meta = None
-    if isinstance(meta, dict):
-        details = [str(meta[key]) for key in ('index_code', 'unit', 'frequency')
-                   if isinstance(meta.get(key), str) and meta[key]]
-        if details:
-            parts.append(' · '.join(details))
-    elif isinstance(source['description'], str):
-        text = re.sub(r'\s+', ' ', source['description']).strip()
-        if text:
-            parts.append(text[:60] + ('…' if len(text) > 60 else ''))
-    if source.get('data_date'):
-        parts.append('数据日期 ' + source['data_date'])
-    url = source.get('url')
-    if isinstance(url, str) and url:
-        parts.append(url if len(url) <= 80 else url[:77] + '…')
-    return ' · '.join(parts)
-
-
-def source_pages(request):
-    """Split compact source lines into fixed-capacity pages instead of clipping."""
-    entries = [source_line(source) for source in request['sources']] or ['未提供数据来源']
-    chunks, current, lines = [], [], 0
-    for entry in entries:
-        size = len(wrap(entry, SOURCE_COLUMNS))
-        if size > SOURCE_PAGE_LINES:
-            raise PresentationError('layout_overflow', '来源条目过长，无法放入固定版式')
-        if current and lines + size > SOURCE_PAGE_LINES:
-            chunks.append(current)
-            current, lines = [], 0
-        current.append(entry)
-        lines += size
-    chunks.append(current)
-    return chunks
 
 
 def checked_deck(request, deck):
@@ -184,10 +141,12 @@ def checked_deck(request, deck):
     validate('deck', deck)
     if request.get('title'):
         deck['title'] = request['title']
-    if len(deck['slides']) + 1 + len(source_pages(request)) > request['max_slides']:
+    slide_count = len(deck['slides'])
+    requested = request.get('requested_slides')
+    if requested is not None and slide_count != requested:
+        raise PresentationError('layout_overflow', f'演示总页数必须为 {requested} 页')
+    if slide_count > request['max_slides']:
         raise PresentationError('layout_overflow', '页数超过 max_slides')
-    if request.get('requested_slides') is not None and len(deck['slides']) + 1 + len(source_pages(request)) != request['requested_slides']:
-        raise PresentationError('layout_overflow', '演示总页数必须为 ' + str(request['requested_slides']) + ' 页（含封面与来源）')
     for slide in deck['slides']:
         blocks, layout = slide['blocks'], slide['layout']
         valid = ((layout == 'bullets' and len(blocks) == 1 and blocks[0]['type'] == 'bullets')
@@ -207,18 +166,17 @@ def checked_deck(request, deck):
 
 
 def pages(request, deck):
-    """Resolve a small renderer-neutral view, retaining full sources."""
-    result = [{'layout': 'cover', 'title': deck['title'], 'subtitle': deck.get('subtitle', '产业链观察 · 证据与判断'),
-               'blocks': [], 'speaker_notes': ''}]
-    result.extend(copy.deepcopy(deck['slides']))
-    chunks = source_pages(request)
-    for number, entries in enumerate(chunks, 1):
-        title = '数据来源与说明' if len(chunks) == 1 else f'数据来源与说明（{number}/{len(chunks)}）'
-        result.append({'layout': 'sources', 'title': title, 'entries': entries,
-                       'blocks': [], 'speaker_notes': ''})
+    """Add the report heading to the first content slide."""
+    result = copy.deepcopy(deck['slides'])
+    first = result[0]
+    deck_title = ' '.join((request.get('title') or deck['title']).split())
+    if deck_title != ' '.join(first['title'].split()):
+        first['deck_title'] = deck_title
+    if deck.get('subtitle'):
+        first['deck_subtitle'] = ' '.join(deck['subtitle'].split())
     # Fixed geometry; fail explicitly rather than silently clipping or reducing fonts.
     for page in result:
-        if len(wrap(page['title'], 22 if page['layout'] == 'cover' else 28)) > 2:
+        if len(wrap(page['title'], 28)) > 2:
             raise PresentationError('layout_overflow', '标题过长，无法放入固定版式')
         for block in page['blocks']:
             if block['type'] == 'kpi':

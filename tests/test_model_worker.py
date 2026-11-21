@@ -83,7 +83,7 @@ class ModelWorkerTests(unittest.TestCase):
         self.assertEqual(opener.open.call_count, 2)
 
     def test_pptx_disables_thinking_and_shows_request_page_budget(self):
-        self.request['max_slides'] = 5
+        self.request.update(max_slides=1, requested_slides=1)
         opener = Mock()
         opener.open.return_value = self.response(json.dumps(self.deck))
         with patch('presentation_core.model_worker.load_arm', return_value=(
@@ -93,14 +93,15 @@ class ModelWorkerTests(unittest.TestCase):
         body = json.loads(opener.open.call_args.args[0].data)
         self.assertEqual(body['thinking'], {'type': 'disabled'})
         system = body['messages'][0]['content']
-        self.assertIn('内容页最多 3 页', system)
+        self.assertIn('演示总页数必须恰好为 1 页', system)
         shown_schema = json.loads(system.split('输出 Schema：\n', 1)[1])
-        self.assertEqual(shown_schema['properties']['slides']['maxItems'], 3)
+        self.assertEqual(shown_schema['properties']['slides']['minItems'], 1)
+        self.assertEqual(shown_schema['properties']['slides']['maxItems'], 1)
 
     def test_layout_overflow_is_repaired_with_capacity_hint(self):
         self.request['max_slides'] = 5
         too_many = copy.deepcopy(self.deck)
-        too_many['slides'] = too_many['slides'] * 4
+        too_many['slides'] = too_many['slides'] * 6
         opener = Mock()
         opener.open.side_effect = [self.response(json.dumps(too_many)),
                                    self.response(json.dumps(self.deck))]
@@ -112,7 +113,7 @@ class ModelWorkerTests(unittest.TestCase):
         self.assertEqual(opener.open.call_count, 2)
         repair = json.loads(opener.open.call_args.args[0].data)['messages'][-1]['content']
         self.assertIn('layout_overflow', repair)
-        self.assertIn('内容页最多 3 页', repair)
+        self.assertIn('内容页最多 5 页', repair)
 
     def test_repair_history_does_not_consume_material_budget(self):
         # Derive the material budget from the current prompt/schema, so new

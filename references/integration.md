@@ -69,7 +69,7 @@ result = generate({
 
 配置中的 deployment_config 包含 arms（模型 URL、模型名、凭据文件名）；credential_dir 和 output_root 使用目标机器的私有目录。也可传入具有 `plan(request, *, deadline, cancel)` 方法的 planner，使用目标项目自己的模型客户端。不要复制实际密钥、数据库或本机部署配置。
 
-请求、结果、研究内容及 PPTX Deck 的 schema 位于 `scripts/presentation_core/contracts/`。可选的 `series` 由宿主提供，每项有 `source_id`、`unit`、`points`（日期与数值列表）及可选的 `frequency`。HTML 直接使用观测值和对应指标名称。模型提交结论标题 `headline`、摘要 `conclusion`、优先指标 `focus_ids` 和按价格、库存、供应、需求组织的解读 `insights`。离线渲染兼容缺少 `headline` 的旧计划。PPTX 用同一请求规划固定画幅。页数参数只作用于 PPTX 和显式传入的旧式 HTML 文件。研究页的结果沿用 `slide_count` 字段，值为 0。
+请求、结果、研究内容及 PPTX Deck 的 schema 位于 `scripts/presentation_core/contracts/`。可选的 `series` 由宿主提供，每项有 `source_id`、`unit`、`points`（日期与数值列表）及可选的 `frequency`。HTML 直接使用观测值和对应指标名称。模型提交结论标题 `headline`、摘要 `conclusion`、优先指标 `focus_ids` 和按价格、库存、供应、需求组织的解读 `insights`。离线渲染兼容缺少 `headline` 的旧计划。PPTX 的 `requested_slides` 支持 1 至 12，成品页数等于 `slides` 的项数，报告标题和副标题随第一页正文展示。旧式分页 HTML 文件仍采用自身的页数约束。研究页的结果沿用 `slide_count` 字段，值为 0。
 
 ## 预览和 PDF 交付边界
 
