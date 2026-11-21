@@ -97,6 +97,24 @@ class ModelWorkerTests(unittest.TestCase):
         shown_schema = json.loads(system.split('输出 Schema：\n', 1)[1])
         self.assertEqual(shown_schema['properties']['slides']['minItems'], 1)
         self.assertEqual(shown_schema['properties']['slides']['maxItems'], 1)
+        self.assertNotIn('caption', shown_schema['properties']['slides']['items']['properties'])
+
+    def test_invalid_pptx_block_retry_names_the_specific_field(self):
+        invalid = copy.deepcopy(self.deck)
+        invalid['slides'][0].update(layout='kpi', blocks=[
+            {'type': 'kpi', 'items': [{'label': '港口库存', 'value': '120', 'unit': '万吨'}]}
+        ])
+        opener = Mock()
+        opener.open.side_effect = [self.response(json.dumps(invalid)), self.response(json.dumps(self.deck))]
+        with patch('presentation_core.model_worker.load_arm', return_value=(
+                {'url': 'https://example.invalid/chat/completions', 'model': 'dummy'}, 'test-secret')), \
+                patch('presentation_core.model_worker.urllib.request.build_opener', return_value=opener):
+            self.assertEqual(plan(self.request, self.config), self.deck)
+        retry = json.loads(opener.open.call_args.args[0].data)['messages'][0]['content']
+        self.assertIn('$.slides[0].blocks[0].items', retry)
+        self.assertIn('minItems=2', retry)
+        shown_schema = json.loads(retry.split('输出 Schema：\n', 1)[1])
+        self.assertEqual(shown_schema['properties']['slides']['items']['properties']['layout']['enum'], ['bullets'])
 
     def test_layout_overflow_is_repaired_with_capacity_hint(self):
         self.request['max_slides'] = 5

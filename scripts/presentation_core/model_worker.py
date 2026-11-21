@@ -74,6 +74,7 @@ def plan(request, config):
         deck_schema = schema('deck')
         # The schema shown to the model carries this request's real page budget.
         deck_schema['properties']['slides']['maxItems'] = content_limit
+        deck_schema['properties']['slides']['items']['properties'].pop('caption')
         if requested is not None:
             deck_schema['properties']['slides']['minItems'] = requested
             prompt += f'\n本次演示总页数必须恰好为 {requested} 页。'
@@ -147,12 +148,28 @@ def plan(request, config):
             if attempt + 1 >= config['max_model_attempts']:
                 message = exc.message if isinstance(exc, PresentationError) else '模型内容不是有效 JSON'
                 raise PresentationError(code, message) from None
+            if code == 'invalid_deck' and not html_mode:
+                # Replan from the original material with a smaller schema. Feeding
+                # the malformed deck back can reproduce its invalid structure.
+                slide_fields = deck_schema['properties']['slides']['items']['properties']
+                slide_fields['layout']['enum'] = ['bullets']
+                blocks = slide_fields['blocks']
+                blocks['maxItems'] = 1
+                blocks['items']['oneOf'] = [variant for variant in blocks['items']['oneOf']
+                                             if variant['properties']['type']['const'] == 'bullets']
+                retry_prompt = prompt.split('\n输出 Schema：\n', 1)[0]
+                detail = exc.message if isinstance(exc, PresentationError) else '模型内容不是有效 JSON'
+                retry_prompt += (
+                    f'\n上次结构校验失败：{detail}。重新根据原材料规划，保留要求的页数。'
+                    '本次每页只允许 layout=bullets 和一个 type=bullets 的块。'
+                    '只返回一个符合新 Schema 的 JSON 对象。'
+                    '\n输出 Schema：\n' + json.dumps(deck_schema, ensure_ascii=False, separators=(',', ':')))
+                messages[0] = {'role': 'system', 'content': retry_prompt}
+                continue
             hint = ''
             if code == 'layout_overflow' and not html_mode:
                 hint = ('；内容页最多 ' + str(content_limit) + ' 页，表格含表头最多 5 行且每格文字更短，'
                         '要点页合计不超过 12 行')
-            elif code == 'invalid_deck':
-                hint = '；表格最多 5 列（headers 和每行最多 5 项），版式必须与块类型匹配'
             messages.extend([{'role': 'assistant', 'content': content},
                              {'role': 'user', 'content': '结构校验失败：' + code +
                               ('；' + exc.message if isinstance(exc, PresentationError) else '') +

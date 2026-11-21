@@ -9,11 +9,10 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from presentation_core import generate, render
 from presentation_core.contracts import ROOT, PresentationError, normalize_request, validate
-from presentation_core.intent import presentation_request
 
 
 class GenerationTests(unittest.TestCase):
@@ -42,11 +41,6 @@ class GenerationTests(unittest.TestCase):
 
     def test_single_slide_pptx_combines_report_heading_and_editable_content(self):
         from pptx import Presentation
-        for question in ('一页PPT', '做 1 页 PPT', '把上面的分析做成一页PPT'):
-            with self.subTest(question=question):
-                intent = presentation_request(question)
-                self.assertEqual(intent['target_format'], 'pptx')
-                self.assertEqual(intent['requested_slides'], 1)
         self.request.update(target_format='pptx', max_slides=1, requested_slides=1)
         self.deck['subtitle'] = '合成演示，非真实行情'
         result = render(self.request, self.deck, config=self.config)
@@ -62,6 +56,23 @@ class GenerationTests(unittest.TestCase):
         self.assertIn('供应与需求应结合观察。', texts)
         self.assertIn('01 / 01', texts)
         self.assertEqual(slide.notes_slide.notes_text_frame.text, self.deck['slides'][0]['speaker_notes'])
+
+    def test_generated_pptx_defaults_to_one_page_and_omits_caption(self):
+        from pptx import Presentation
+
+        self.request['target_format'] = 'pptx'
+        self.deck['slides'][0]['caption'] = '数据溯源：仅用于复核'
+        planner = Mock()
+        planner.plan.return_value = self.deck
+        result = generate(self.request, config=self.config, planner=planner)
+        self.assertEqual(result['status'], 'succeeded', result.get('error'))
+        self.assertEqual(result['slide_count'], 1)
+        request = planner.plan.call_args.args[0]
+        self.assertEqual((request['requested_slides'], request['max_slides']), (1, 1))
+        prs = Presentation(result['artifacts'][0]['local_path'])
+        texts = [shape.text for shape in prs.slides[0].shapes if shape.has_text_frame]
+        self.assertIn('供应与需求应结合观察。', texts)
+        self.assertNotIn(self.deck['slides'][0]['caption'], texts)
 
     def test_research_puts_numbers_in_the_summary_below_the_headline(self):
         request = json.loads((ROOT / 'examples/research-request.json').read_text())

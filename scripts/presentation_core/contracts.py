@@ -29,11 +29,18 @@ def validate(name, value, *, contract=None):
                              format_checker=FormatChecker()).validate(value)
     except ValidationError as exc:
         # Avoid embedding model output or private analysis in error messages.
+        if name == 'deck' and exc.validator == 'oneOf' and isinstance(exc.instance, dict):
+            block_type = exc.instance.get('type')
+            exc = next((detail for detail in exc.context
+                        if exc.validator_value[detail.schema_path[0]]['properties']['type']['const'] == block_type),
+                       exc)
         path = getattr(exc, 'json_path', None) or '/'.join(str(v) for v in exc.absolute_path)[:120] or 'root'
         detail = f'{name}: {path[:160]} 不符合契约'
         if exc.validator in ('maxItems', 'minItems', 'maxLength', 'minLength',
                              'enum', 'const', 'type', 'required', 'pattern'):
             detail += f'（{exc.validator}={exc.validator_value}）'
+        elif exc.validator == 'additionalProperties':
+            detail += '（含未定义字段）'
         code = {'request': 'invalid_request', 'research': 'invalid_html'}.get(name, 'invalid_deck')
         raise PresentationError(code,
                                 detail) from None

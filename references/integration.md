@@ -26,6 +26,8 @@ HTML 将研究页样式和交互内嵌到单文件，PPTX 使用可编辑原生�
 
 本项目的宿主适配保留在 Fusion：`fusion/runtime/presentation.py` 加载项目 skill 的同一份代码、注册 AgentScope 工具，装配私有任务上下文并处理执行/下载；`fusion/runtime/presentation_stage.py` 隔离可选演示子进程及截止时间；`fusion/chat/presentation_history.py` 读取授权会话并归档。无需将这些适配和 Fusion 的数据库、队列或登录系统复制到其他项目。
 
+Fusion 的入口分类模型接收 QwenPaw 和 AgentScope 从已启用 skill 生成的名称与描述。同一次分类同时选择分析路线和可选演示交付，宿主复用该结果。选中演示后，宿主读取当前会话的材料，按需完成本轮分析，再装载完整 skill 指令和工具。DataRetrieval 接入 v0.12 时，宿主需支持这一基于技能描述的分类流程。
+
 ## 独立运行
 
 以下命令中的 `/target/skills/presentation` 是复制后的目录，可以位于任意项目。将配置模板复制到目标项目私有目录并填写实际值。
@@ -70,6 +72,8 @@ result = generate({
 配置中的 deployment_config 包含 arms（模型 URL、模型名、凭据文件名）；credential_dir 和 output_root 使用目标机器的私有目录。也可传入具有 `plan(request, *, deadline, cancel)` 方法的 planner，使用目标项目自己的模型客户端。不要复制实际密钥、数据库或本机部署配置。
 
 请求、结果、研究内容及 PPTX Deck 的 schema 位于 `scripts/presentation_core/contracts/`。可选的 `series` 由宿主提供，每项有 `source_id`、`unit`、`points`（日期与数值列表）及可选的 `frequency`。HTML 直接使用观测值和对应指标名称。模型提交结论标题 `headline`、摘要 `conclusion`、优先指标 `focus_ids` 和按价格、库存、供应、需求组织的解读 `insights`。离线渲染兼容缺少 `headline` 的旧计划。PPTX 的 `requested_slides` 支持 1 至 12，成品页数等于 `slides` 的项数，报告标题和副标题随第一页正文展示。旧式分页 HTML 文件仍采用自身的页数约束。研究页的结果沿用 `slide_count` 字段，值为 0。
+
+PPTX 模型生成时，省略 `requested_slides` 生成一页。`max_slides` 是上限，指定页数请传 `requested_slides`。离线渲染以传入的 Deck 内容为准。
 
 ## 预览和 PDF 交付边界
 

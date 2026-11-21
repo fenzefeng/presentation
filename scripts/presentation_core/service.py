@@ -66,6 +66,8 @@ def private_root(path):
 
 def run(request, *, content=None, config=None, planner=None, cancel=None):
     request = normalize_request(request)
+    if content is None and request['target_format'] == 'pptx' and 'requested_slides' not in request:
+        request.update(requested_slides=1, max_slides=1)
     cfg = configuration(config)
     root = private_root(cfg['output_root'])
     generation_id = str(uuid.uuid4())
@@ -127,6 +129,10 @@ def run(request, *, content=None, config=None, planner=None, cancel=None):
         else:
             from . import render_pptx as renderer
             deck, warnings = checked_deck(request, content)
+            if mode == 'model':
+                # The generated layout puts necessary units and dates next to the evidence.
+                for slide in deck['slides']:
+                    slide.pop('caption', None)
             view = pages(request, deck)
             slide_count = len(view)
             result['warnings'] = warnings
