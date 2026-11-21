@@ -3,26 +3,29 @@
   "$id": "urn:fusion:presentation:research:v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["title", "conclusion", "insights"],
+  "required": ["headline", "conclusion", "insights"],
   "properties": {
-    "title": {"type": "string", "minLength": 1, "maxLength": 80},
-    "conclusion": {"type": "string", "minLength": 1, "maxLength": 140},
+    "headline": {
+      "type": "string", "minLength": 1, "maxLength": 32,
+      "pattern": "^[^0-9０-９\\r\\n]+$",
+      "description": "一句概括主要分析结论的标题，具体数值和日期放到摘要"
+    },
+    "conclusion": {
+      "type": "string", "minLength": 1, "maxLength": 140,
+      "description": "标题下的摘要，保留原材料中支持结论的关键数值、日期、单位和统计口径"
+    },
     "focus_ids": {
       "type": "array", "maxItems": 3, "uniqueItems": true,
       "items": {"type": "string", "maxLength": 64}
     },
     "insights": {
-      "type": "array", "maxItems": 8,
+      "type": "array", "maxItems": 4,
       "items": {
         "type": "object", "additionalProperties": false,
         "required": ["heading", "text"],
         "properties": {
-          "heading": {"type": "string", "minLength": 1, "maxLength": 72},
-          "text": {"type": "string", "minLength": 1, "maxLength": 850},
-          "source_ids": {
-            "type": "array", "maxItems": 8, "uniqueItems": true,
-            "items": {"type": "string", "maxLength": 64}
-          }
+          "heading": {"enum": ["价格", "库存", "供应", "需求"]},
+          "text": {"type": "string", "minLength": 1, "maxLength": 850}
         }
       }
     }

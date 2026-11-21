@@ -126,7 +126,7 @@
       readout.textContent = parts.join(' · ');
     }
 
-    plot.addEventListener('pointermove', event => {
+    function showNearest(event) {
       const rect = plot.getBoundingClientRect();
       const position = (event.clientX - rect.left) * width / rect.width;
       let nearest = 0;
@@ -134,7 +134,9 @@
         if (Math.abs(position - x(visible[i].time)) < Math.abs(position - x(visible[nearest].time))) nearest = i;
       }
       show(nearest);
-    });
+    }
+    plot.addEventListener('pointermove', showNearest);
+    plot.addEventListener('pointerdown', showNearest);
     plot.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();

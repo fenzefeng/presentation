@@ -50,6 +50,24 @@ class ModelWorkerTests(unittest.TestCase):
             self.assertEqual(plan(self.request, self.config), json.loads(research))
         self.assertEqual(opener.open.call_count, 2)
 
+    def test_invalid_research_content_is_repaired(self):
+        request = json.loads((ROOT / 'examples/research-request.json').read_text())
+        research = json.loads((ROOT / 'examples/research.json').read_text())
+        without_headline = {key: value for key, value in research.items() if key != 'headline'}
+        for invalid in (without_headline, dict(research, headline='库存上涨 4.5%'),
+                        dict(research, title='额外的主题'),
+                        dict(research, insights=research['insights'] * 2),
+                        dict(research, insights=[{'heading': '其他', 'text': '解读'}]),
+                        dict(research, insights=[dict(research['insights'][0], source_ids=['D1'])])):
+            with self.subTest(invalid=invalid):
+                opener = Mock()
+                opener.open.side_effect = [self.response(json.dumps(invalid)), self.response(json.dumps(research))]
+                with patch('presentation_core.model_worker.load_arm', return_value=(
+                        {'url': 'https://example.invalid/chat/completions', 'model': 'dummy'}, 'test-secret')), \
+                        patch('presentation_core.model_worker.urllib.request.build_opener', return_value=opener):
+                    self.assertEqual(plan(request, self.config), research)
+                self.assertEqual(opener.open.call_count, 2)
+
     def response(self, content):
         return io.BytesIO(json.dumps({'choices': [{'finish_reason': 'stop',
                             'message': {'content': content}}]}).encode())

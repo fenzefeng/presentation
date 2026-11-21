@@ -25,7 +25,7 @@ def indicator_card(item):
     prior = points.get(previous_week(day))
     change = f"{signed(value - prior)} {escape(item['unit'])}" if prior is not None else '—'
     return (
-        f'<article class="indicator"><h3><a href="#source-{item["source_id"]}">{escape(item["name"])}</a></h3>'
+        f'<article class="indicator"><h3>{escape(item["name"])}</h3>'
         f'<p class="value">{value:,} <small>{escape(item["unit"])}</small></p>'
         f'<p class="card-meta"><time datetime="{day}">{day}</time><span>周变化 {change}</span></p></article>'
     )
@@ -44,35 +44,11 @@ def raw_table(item):
     )
 
 
-def source_details(source):
-    description = source['description']
-    try:
-        meta = json.loads(description)
-    except ValueError:
-        meta = None
-    if isinstance(meta, dict):
-        labels = {'index_code': '指标编码', 'unit': '单位', 'frequency': '频率', 'period': '来源记录区间',
-                  'observations_from': '观测取自'}
-        parts = []
-        for key, label in labels.items():
-            value = meta.get(key)
-            if isinstance(value, list):
-                value = ' 至 '.join(map(str, value))
-            if isinstance(value, str) and value.strip():
-                parts.append(f'{label} {value}')
-        description = ' · '.join(parts) or description
-    source_id = source['id']
-    href = source.get('url')
-    link = f'<a href="{escape(href)}" target="_blank" rel="noopener noreferrer">{escape(href)}</a>' if href else ''
-    day = source.get('data_date')
-    return (f'<li id="source-{source_id}"><strong>[{source_id}] {escape(source["title"])}</strong>'
-            + (f'<p>{escape(description)}</p>' if description else '')
-            + (f'<p>数据日期 <time datetime="{day}">{day}</time></p>' if day else '') + link + '</li>')
-
-
-def document(request, content):
-    content = checked_research(request, content)
-    title = escape(request.get('title') or content['title'])
+def document(request, content, *, allow_legacy=False):
+    content = checked_research(request, content, allow_legacy=allow_legacy)
+    summary = content['conclusion'].strip()
+    headline = content['headline'].strip()
+    summary_html = f'<p class="report-summary"><strong>{escape(summary)}</strong></p>' if summary != headline else ''
     sources = {source['id']: source for source in request['sources']}
     series = {item['source_id']: dict(item, name=sources[item['source_id']]['title'])
               for item in request.get('series', [])}
@@ -84,7 +60,6 @@ def document(request, content):
     frequencies = list(dict.fromkeys(item['frequency'] for item in ordered if item.get('frequency')))
     if frequencies:
         metadata.append('频率 ' + escape('、'.join(frequencies)))
-    metadata.append(f'<a href="#sources">来源 {len(sources)} 项</a>' if sources else '未提供数据来源')
     cards = ''.join(map(indicator_card, ordered[:len(chosen)]))
     options = ''.join(f'<option value="{sid}"{" selected" if sid in chosen else ""}>{escape(item["name"])}</option>'
                       for sid, item in series.items())
@@ -110,17 +85,15 @@ def document(request, content):
         <p id="chart-note" class="meta" aria-live="polite">可展开下方数据明细查看原始观测值。</p>
         <div id="charts"></div>
       </section>""" if series else (
-        '<p class="empty">材料未记录带日期、数值和单位的观测序列。可查看下方解读和来源。</p>'
+        '<p class="empty">材料未记录带日期、数值和单位的观测序列。</p>'
     )
     insights = ''
     for item in content['insights']:
-        citations = ' '.join(f'<a href="#source-{sid}">[{sid}]</a>' for sid in item.get('source_ids', []))
-        insights += f'<article><h3>{escape(item["heading"])}</h3><p>{escape(item["text"])}</p>{citations}</article>'
+        insights += f'<article><h3>{escape(item["heading"])}</h3><p>{escape(item["text"])}</p></article>'
     interpretation = f'<section class="insights"><h2>关键解读</h2>{insights}</section>' if insights else ''
     tables = ''.join(map(raw_table, ordered))
-    data_details = f'<details id="data-details"><summary>数据明细</summary>{tables}</details>' if tables else ''
-    source_items = ''.join(map(source_details, sources.values()))
-    source_body = f'<ul>{source_items}</ul>' if source_items else '<p>未提供数据来源。</p>'
+    data_details = (f'<div class="details-grid"><details id="data-details"><summary>数据明细</summary>'
+                    f'{tables}</details></div>') if tables else ''
     data = escape(json.dumps(ordered, ensure_ascii=False, allow_nan=False))
     style = (ROOT / 'visuals/research.css').read_text(encoding='utf-8')
     script = (ROOT / 'visuals/research.js').read_text(encoding='utf-8')
@@ -136,15 +109,15 @@ def document(request, content):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src {script_source}; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<title>{title}</title><style>{style}</style>
+<title>{escape(headline)}</title><style>{style}</style>
 </head>
 <body><div class="container"><main class="report">
-<header><p class="topic">{title}</p><h1>{escape(content['conclusion'])}</h1>
+<header><h1>{escape(headline)}</h1>{summary_html}
 <p class="meta">{' · '.join(metadata)}</p></header>
 {f'<section class="indicators" aria-label="关键指标">{cards}</section>' if cards else ''}
 {controls}
 {interpretation}
-<div class="details-grid">{data_details}<details id="sources"><summary>指标口径与来源</summary>{source_body}</details></div>
+{data_details}
 </main></div>
 <template id="research-data">{data}</template>
 {runtime}

@@ -23,9 +23,10 @@ def schema(name):
     return json.loads((ROOT / 'contracts' / f'{name}.schema.json').read_text())
 
 
-def validate(name, value):
+def validate(name, value, *, contract=None):
     try:
-        Draft202012Validator(schema(name), format_checker=FormatChecker()).validate(value)
+        Draft202012Validator(contract if contract is not None else schema(name),
+                             format_checker=FormatChecker()).validate(value)
     except ValidationError as exc:
         # Avoid embedding model output or private analysis in error messages.
         path = getattr(exc, 'json_path', None) or '/'.join(str(v) for v in exc.absolute_path)[:120] or 'root'
@@ -67,14 +68,33 @@ def normalize_request(value):
     return value
 
 
-def checked_research(request, research):
-    validate('research', research)
-    source_ids = {source['id'] for source in request['sources']}
+def checked_research(request, research, *, allow_legacy=False):
+    contract = schema('research')
+    legacy = allow_legacy and isinstance(research, dict) and 'title' in research
+    if legacy:
+        # Previously saved plans remain renderable with the new page layout.
+        research = copy.deepcopy(research)
+        legacy_title = research.pop('title')
+        if 'headline' not in research:
+            candidates = (research.get('conclusion'), legacy_title)
+            research['headline'] = next((value.strip() for value in candidates if isinstance(value, str)
+                                         and 0 < len(value.strip()) <= 32
+                                         and not re.search(r'[0-9０-９\r\n]', value.strip())), '主要结论')
+        insight_schema = contract['properties']['insights']
+        insight_schema['maxItems'] = 8
+        insight_schema['items']['properties']['heading'] = {'type': 'string', 'minLength': 1, 'maxLength': 72}
+        if isinstance(research.get('insights'), list):
+            for insight in research['insights']:
+                if isinstance(insight, dict):
+                    insight.pop('source_ids', None)
+    validate('research', research, contract=contract)
     series_ids = {item['source_id'] for item in request.get('series', [])}
-    if set(research.get('focus_ids', [])) - series_ids or any(
-            set(item.get('source_ids', [])) - source_ids for item in research['insights']):
-        raise PresentationError('invalid_html', '研究内容引用了未提供的来源或指标')
-    fields = [research['title'], research['conclusion']]
+    if set(research.get('focus_ids', [])) - series_ids:
+        raise PresentationError('invalid_html', '研究内容引用了未提供的指标')
+    headings = [item['heading'] for item in research['insights']]
+    if not legacy and len(set(headings)) != len(headings):
+        raise PresentationError('invalid_html', '关键解读的价格、库存、供应和需求各最多出现一次')
+    fields = [research['headline'], research['conclusion']]
     fields.extend(field for item in research['insights'] for field in (item['heading'], item['text']))
     if any(not field.strip() for field in fields):
         raise PresentationError('invalid_html', '研究标题、结论或解读不能为空白')

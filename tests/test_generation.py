@@ -49,6 +49,33 @@ class GenerationTests(unittest.TestCase):
         self.assertIn('供应', '\n'.join(s.text for s in prs.slides[1].shapes if s.has_text_frame))
         self.assertEqual(prs.slides[1].notes_slide.notes_text_frame.text, self.deck['slides'][0]['speaker_notes'])
 
+    def test_research_puts_numbers_in_the_summary_below_the_headline(self):
+        request = json.loads((ROOT / 'examples/research-request.json').read_text())
+        report = json.loads((ROOT / 'examples/research.json').read_text())
+        result = render(request, report, config=self.config)
+        self.assertEqual(result['status'], 'succeeded')
+        data = Path(result['artifacts'][0]['local_path']).read_text()
+        self.assertIn(f'<h1>{report["headline"]}</h1>'
+                      f'<p class="report-summary"><strong>{report["conclusion"]}</strong></p>', data)
+        self.assertNotIn('class="topic"', data)
+        self.assertNotIn('指标口径与来源', data)
+        self.assertNotIn('href="#source', data)
+        self.assertIn('<h3>库存</h3>', data)
+        self.assertIn('<summary>数据明细</summary>', data)
+
+    def test_old_research_plan_keeps_its_numeric_conclusion_below_the_title(self):
+        request = json.loads((ROOT / 'examples/research-request.json').read_text())
+        report = json.loads((ROOT / 'examples/research.json').read_text())
+        report.pop('headline')
+        report['title'] = '铁矿石库存观察'
+        report['insights'][0].update(heading='库存方向分化', source_ids=['D1', 'D2'])
+        result = render(request, report, config=self.config)
+        self.assertEqual(result['status'], 'succeeded')
+        data = Path(result['artifacts'][0]['local_path']).read_text()
+        self.assertIn(f'<h1>{report["title"]}</h1>'
+                      f'<p class="report-summary"><strong>{report["conclusion"]}</strong></p>', data)
+        self.assertIn('<h3>库存方向分化</h3>', data)
+
     def test_table_and_two_column_work_in_pptx(self):
         self.deck['slides'].extend([
             {'layout': 'two_column', 'title': '观察与限制', 'speaker_notes': '', 'blocks': [

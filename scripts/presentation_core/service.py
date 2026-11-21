@@ -107,7 +107,7 @@ def run(request, *, content=None, config=None, planner=None, cancel=None):
         fmt = request['target_format']
         if html_mode and isinstance(content, dict) and ('slides' not in content or mode == 'model'):
             from . import render_research as renderer
-            view = renderer.document(request, content)
+            view = renderer.document(request, content, allow_legacy=mode == 'offline')
             slide_count = 0
             result['provenance']['template_version'] = 'research-v1'
             result['warnings'] = ['review_required'] + ([] if request['sources'] else ['sources_missing'])

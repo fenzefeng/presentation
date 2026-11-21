@@ -69,18 +69,18 @@ result = generate({
 
 配置中的 deployment_config 包含 arms（模型 URL、模型名、凭据文件名）；credential_dir 和 output_root 使用目标机器的私有目录。也可传入具有 `plan(request, *, deadline, cancel)` 方法的 planner，使用目标项目自己的模型客户端。不要复制实际密钥、数据库或本机部署配置。
 
-请求、结果、研究内容及 PPTX Deck 的 schema 位于 `scripts/presentation_core/contracts/`。可选的 `series` 由宿主提供，每项有 `source_id`、`unit`、`points`（日期与数值列表）及可选的 `frequency`。HTML 直接使用观测值，模型只提交标题、结论、优先展示的指标 ID 和解读。PPTX 用同一请求规划固定画幅；页数参数只作用于 PPTX 和显式传入的旧式 HTML 文件。新研究页的结果沿用 `slide_count` 字段，值为 0。
+请求、结果、研究内容及 PPTX Deck 的 schema 位于 `scripts/presentation_core/contracts/`。可选的 `series` 由宿主提供，每项有 `source_id`、`unit`、`points`（日期与数值列表）及可选的 `frequency`。HTML 直接使用观测值和对应指标名称。模型提交结论标题 `headline`、摘要 `conclusion`、优先指标 `focus_ids` 和按价格、库存、供应、需求组织的解读 `insights`。离线渲染兼容缺少 `headline` 的旧计划。PPTX 用同一请求规划固定画幅。页数参数只作用于 PPTX 和显式传入的旧式 HTML 文件。研究页的结果沿用 `slide_count` 字段，值为 0。
 
 ## 预览和 PDF 交付边界
 
 | 层 | 职责 |
 | --- | --- |
-| Skill | 生成连续研究页、离线筛选与明细，并维护样式、来源和打印排版。页面用容器查询适配 iframe 实际宽度。 |
-| 宿主后端 | 从已完成分析中保留有界的原始观测，按现有会话权限提供附件。Fusion 最多保留 12 项、1200 个观测，每个读数窗口取最近 200 个原始点。旧归档没有逐点数据时保留来源和定性解读。预览仅放行对应已安装资源的脚本哈希。 |
+| Skill | 生成连续研究页、离线筛选与明细，并维护样式和打印排版。页面用容器查询适配 iframe 实际宽度。 |
+| 宿主后端 | 从已完成分析中保留有界的原始观测，按现有会话权限提供附件。Fusion 最多保留 12 项、1200 个观测，每个读数窗口取最近 200 个原始点。预览仅放行对应已安装资源的脚本哈希。 |
 | 宿主前端 | 承载隔离 iframe，管理侧栏拖动、放大、还原，以及 HTML 和 PDF 下载。 |
-| DataRetrieval PDF 导出 | 按附件 ID 校验访问权限，用隔离浏览器读取归档 HTML。导出时展开明细与来源，长表格按行分页并重复表头。PDF 使用归档研究页的默认视图。 |
+| DataRetrieval PDF 导出 | 按附件 ID 校验访问权限，用隔离浏览器读取归档 HTML。导出时展开数据明细，长表格按行分页并重复表头。PDF 使用归档研究页的默认视图。 |
 
-外部 DATA 路由偶尔仅在已完成答复中返回带单位的 Markdown 日期表。Fusion 在其指标编码、单位、日期范围和日期读数能与外部服务的验证结果匹配时，保留表格中的点供演示复用。来源区注明这些观测取自答复表格。
+外部 DATA 路由偶尔仅在已完成答复中返回带单位的 Markdown 日期表。Fusion 在其指标编码、单位、日期范围和日期读数能与外部服务的验证结果匹配时，保留表格中的点供演示复用。
 
 PDF 导出由 DataRetrieval 宿主提供，可对已有 HTML 附件重新导出，无需再次调用展示模型。其他宿主可根据需要接入同类功能。
 
